@@ -1,0 +1,117 @@
+// schema.prisma
+
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id                String             @id @default(cuid())
+  email             String             @unique
+  password          String?
+  name              String?
+  googleId          String?            @unique
+  image             String?
+  role              UserRole           @default(USER)
+  categories        Category[]
+  ledgerEntries     LedgerEntry[]
+  budgets           Budget[]
+  recurringEntries  RecurringEntry[]
+  baseCurrency      String             @default("PKR")
+  isVerified        Boolean            @default(false)
+  verificationToken String?
+  verificationExpiry DateTime?
+  resetToken        String?
+  resetExpiry       DateTime?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+}
+
+enum UserRole {
+  ADMIN
+  USER
+}
+
+model Category {
+  id                String             @id @default(cuid())
+  name              String
+  icon              String?
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId            String
+  ledgerEntries     LedgerEntry[]
+  budgets           Budget[]
+  recurringEntries  RecurringEntry[]
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  isSystem          Boolean            @default(false)
+
+  @@unique([name, userId])
+}
+
+model LedgerEntry {
+  id              String           @id @default(cuid())
+  amount          Decimal          @db.Decimal(12, 2)
+  description     String
+  date            DateTime         @default(now())
+  type            LedgerEntryType
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId          String
+  category        Category?        @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  categoryId      String?
+  receiptUrl      String?
+  receiptPublicId String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+}
+
+model RecurringEntry {
+  id            String          @id @default(cuid())
+  amount        Decimal         @db.Decimal(12, 2)
+  description   String
+  type          LedgerEntryType
+  frequency     Frequency       @default(MONTHLY)
+  nextExecution DateTime
+  lastExecution DateTime?
+  isActive      Boolean         @default(true)
+  
+  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId        String
+  category      Category?       @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  categoryId    String?
+
+  hits          Int             @default(0)
+  lastStatus    String?
+  lastStatusDate DateTime?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+}
+
+model Budget {
+  id          String   @id @default(cuid())
+  limit       Decimal  @db.Decimal(12, 2)
+  month       Int
+  year        Int
+  category    Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  categoryId  String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+
+  @@unique([categoryId, month, year, userId])
+}
+
+enum LedgerEntryType {
+  INCOME
+  EXPENSE
+  TRANSFER
+}
+
+enum Frequency {
+  TEN_SECONDS
+  DAILY
+  WEEKLY
+  MONTHLY
+  YEARLY
+}
