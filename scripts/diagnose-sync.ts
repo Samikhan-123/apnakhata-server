@@ -1,5 +1,6 @@
 import prisma from '../src/config/prisma.js';
 
+// diagnose sync 
 async function diagnose() {
   console.log('--- SYNC DIAGNOSTIC V3 START ---');
   try {
@@ -24,7 +25,7 @@ async function diagnose() {
       console.log('Category UserID match:', category.userId === user.id);
     }
 
-    // Check Balance
+    // Check Balance    
     const stats: any = await prisma.ledgerEntry.groupBy({
       by: ['type'],
       where: { userId: user.id },

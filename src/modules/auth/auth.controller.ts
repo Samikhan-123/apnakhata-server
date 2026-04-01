@@ -11,7 +11,7 @@ import { AppError } from '../../middlewares/error.middleware.js';
 
 export class AuthController {
   /**
-   * Register a new user
+   * Register a new user 
    */
   async register(req: Request, res: Response, next: NextFunction) {
     try {
@@ -30,7 +30,7 @@ export class AuthController {
   }
 
   /**
-   * Authenticate a user
+   * Authenticate user
    */
   async login(req: Request, res: Response, next: NextFunction) {
     try {

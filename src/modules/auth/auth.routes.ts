@@ -18,7 +18,7 @@ router.post('/login', authController.login);
 
 /**
  * @route   POST /api/auth/google
- * @desc    Login/Signup with Google
+ * @desc    Login/Signup with Google Button
  */
 router.post('/google', authController.googleLogin);
 

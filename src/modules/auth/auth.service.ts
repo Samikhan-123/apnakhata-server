@@ -225,7 +225,7 @@ export class AuthService {
             name: name || email.split('@')[0],
             googleId,
             image,
-            isVerified: true, // Auto-verify Google users
+            isVerified: true, // Auto-verify Google users no need to send emails
             role: email === process.env.ADMIN_EMAIL ? 'ADMIN' : 'USER',
             baseCurrency: 'PKR', // Default
           }

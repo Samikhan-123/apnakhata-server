@@ -8,6 +8,7 @@ export class AuthRepository {
     });
   }
 
+  // find by id 
   async findById(id: string) {
     return await prisma.user.findUnique({
       where: { id },
@@ -22,6 +23,7 @@ export class AuthRepository {
     });
   }
 
+  // create user 
   async create(data: RegisterInput & { passwordHash: string, verificationToken?: string, verificationExpiry?: Date, role?: 'ADMIN' | 'USER' }) {
     return await prisma.user.create({
       data: {
@@ -36,6 +38,7 @@ export class AuthRepository {
     });
   }
 
+  // update user 
   async update(id: string, data: any) {
     return await prisma.user.update({
       where: { id },
@@ -43,6 +46,7 @@ export class AuthRepository {
     });
   }
 
+  // find by reset token 
   async findByResetToken(token: string) {
     return await prisma.user.findFirst({
       where: {
