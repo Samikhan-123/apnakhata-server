@@ -53,7 +53,7 @@ export class CategoryController {
   }
 
   /**
-   * Delete a category
+   * Delete a category 
    */
   async delete(req: AuthRequest, res: Response, next: NextFunction) {
     try {

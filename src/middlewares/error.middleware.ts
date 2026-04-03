@@ -24,7 +24,7 @@ export const globalErrorHandler = (
     });
   }
 
-  // Handle Zod Validation Errors
+  // Zod Validation Errors
   if (err instanceof z.ZodError || err.name === 'ZodError') {
     statusCode = 400;
     const firstIssue = err.errors?.[0];
@@ -37,7 +37,7 @@ export const globalErrorHandler = (
     });
   }
 
-  // Handle Prisma Known Request Errors (e.g., unique constraints)
+  // Handle Prisma Known Request Errors 
   if (err.code && err.code.startsWith('P')) {
     statusCode = 400;
     if (err.code === 'P2002') {
@@ -51,7 +51,7 @@ export const globalErrorHandler = (
 
   const isProduction = process.env.NODE_ENV === 'production';
 
-  // Final Response
+  // Response
   res.status(statusCode).json({
     success: false,
     message,

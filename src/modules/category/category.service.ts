@@ -9,7 +9,7 @@ export class CategoryService {
   async getAll(userId: string) {
     const categories = await categoryRepository.findAll(userId);
     
-    // Lazy seeding: If user has no categories, create default ones
+    // Lazy seeding: If user has no categories, create default ones for user
     if (categories.length === 0) {
       const defaults = [
         { name: 'food', icon: 'Utensils', isSystem: true },

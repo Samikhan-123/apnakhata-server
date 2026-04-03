@@ -1,6 +1,7 @@
 import prisma from '../../config/prisma.js';
 import { CreateBudgetInput, UpdateBudgetInput } from './budget.validation.js';
 
+// class for budget repository
 export class BudgetRepository {
   async findAll(userId: string, month: number, year: number) {
     return await prisma.budget.findMany({
@@ -11,6 +12,7 @@ export class BudgetRepository {
     });
   }
 
+  // find unique budget
   async findUnique(userId: string, categoryId: string, month: number, year: number) {
     return await prisma.budget.findUnique({
       where: {
@@ -24,6 +26,7 @@ export class BudgetRepository {
     });
   }
 
+  // upsert budget
   async upsert(userId: string, data: CreateBudgetInput) {
     return await prisma.budget.upsert({
       where: {
@@ -44,6 +47,7 @@ export class BudgetRepository {
     });
   }
 
+  // delete budget
   async delete(userId: string, id: string) {
     return await prisma.budget.delete({
       where: { id, userId },

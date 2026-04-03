@@ -31,6 +31,7 @@ export class BudgetController {
       const validatedData = createBudgetSchema.parse(req.body);
       const budget = await budgetService.setBudget(req.user.id, validatedData);
       
+      // response
       res.status(200).json({
         success: true,
         message: 'Budget updated successfully',

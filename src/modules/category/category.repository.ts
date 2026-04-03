@@ -1,7 +1,9 @@
 import prisma from '../../config/prisma.js';
 import { CreateCategoryInput, UpdateCategoryInput } from './category.validation.js';
 
+// class for category repository
 export class CategoryRepository {
+  // find all categories
   async findAll(userId: string) {
     return await prisma.category.findMany({
       where: { userId },
@@ -9,18 +11,21 @@ export class CategoryRepository {
     });
   }
 
+  // count categories
   async count(userId: string) {
     return await prisma.category.count({
       where: { userId },
     });
   }
 
+  // find category by id
   async findById(userId: string, id: string) {
     return await prisma.category.findUnique({
       where: { id, userId },
     });
   }
 
+  // create category
   async create(userId: string, data: CreateCategoryInput & { isSystem?: boolean }) {
     return await prisma.category.create({
       data: {
@@ -32,6 +37,7 @@ export class CategoryRepository {
     });
   }
 
+  // update category
   async update(userId: string, id: string, data: UpdateCategoryInput) {
     return await prisma.category.update({
       where: { id, userId },
@@ -39,6 +45,7 @@ export class CategoryRepository {
     });
   }
 
+  // delete category
   async delete(userId: string, id: string) {
     return await prisma.category.delete({
       where: { id, userId },

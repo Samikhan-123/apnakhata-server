@@ -11,5 +11,11 @@
       "src": "/(.*)",
       "dest": "src/index.ts"
     }
+  ],
+  "crons": [
+    {
+      "path": "/api/recurring/process-due",
+      "schedule": "0 12 * * *"
+    }
   ]
 }
