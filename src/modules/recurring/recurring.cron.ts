@@ -2,7 +2,7 @@ import cron from 'node-cron';
 import recurringService from './recurring.service.js';
 import logger from '../../utils/logger.js';
 import * as Sentry from "@sentry/node";
-
+// cron job for recurring transactions
 export const initRecurringCron = () => {
   // Run daily at 12 PM (Noon)
   cron.schedule('0 12 * * *', async () => {

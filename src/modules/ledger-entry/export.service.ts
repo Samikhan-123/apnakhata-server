@@ -1,5 +1,5 @@
 import { LedgerEntry, Category } from '@prisma/client';
-
+// export service for ledger entries
 export class ExportService {
   generateCSV(entries: (LedgerEntry & { category: Category | null })[]) {
     const header = ['Date', 'Description', 'Amount', 'Type', 'Category'];
