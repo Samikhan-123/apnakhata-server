@@ -9,7 +9,7 @@ import { generateToken } from '../../utils/auth.js';
 import mailService from './mail.service.js';
 import axios from 'axios';
 
-const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+const googleClient = new OAuth2Client(process.env.CLIENT_ID);
 
 export class AuthService {
   /**
@@ -184,7 +184,7 @@ export class AuthService {
       if (googleToken.includes('.')) {
         const ticket = await googleClient.verifyIdToken({
           idToken: googleToken,
-          audience: process.env.GOOGLE_CLIENT_ID,
+          audience: process.env.CLIENT_ID,
         });
         payload = ticket.getPayload();
       } else {

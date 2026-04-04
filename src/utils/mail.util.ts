@@ -1,6 +1,7 @@
 import { Resend } from 'resend';
 import 'dotenv/config';
-
+// src/utils/mail.util.ts
+//  resend api used for mail utility
 const resend = new Resend(process.env.RESEND_API_KEY || 're_placeholder');
 
 export interface SendEmailOptions {
@@ -11,7 +12,7 @@ export interface SendEmailOptions {
 
 export const sendEmail = async (options: SendEmailOptions) => {
   const from = process.env.MAIL_FROM || 'Apna Khata <onboarding@resend.dev>';
-  
+
   try {
     const { data, error } = await resend.emails.send({
       from,

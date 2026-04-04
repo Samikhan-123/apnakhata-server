@@ -1,3 +1,5 @@
+// src/templates/email/base.template.ts
+// for email template
 export const baseTemplate = (content: string) => `
 <!DOCTYPE html>
 <html>

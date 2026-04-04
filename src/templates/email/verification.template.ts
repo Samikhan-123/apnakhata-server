@@ -1,5 +1,7 @@
 import { baseTemplate } from './base.template.js';
-
+  
+// src/templates/email/verification.template.ts
+// for verification template
 export const verificationTemplate = (otp: string) => {
   const content = `
     <h2 style="color: #2563eb; font-size: 24px; font-weight: 800; tracking-tight: -0.025em; margin-bottom: 24px;">Your Verification Code</h2>

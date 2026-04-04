@@ -46,7 +46,20 @@ export const globalErrorHandler = (
     } else if (err.code === 'P2025') {
        statusCode = 404;
        message = 'Record not found.';
+    } else {
+      // Catch-all for other Prisma errors to avoid leaking internals
+      message = 'A database error occurred. Please try again later.';
     }
+  }
+
+  // Final Sanitization: Ensure no raw Prisma/DB internal strings leak in the message
+  const technicalKeywords = ['Prisma', 'database', 'table', 'relation', 'public.', 'invocation', 'constraint'];
+  const isTechnical = technicalKeywords.some(keyword => 
+    message.toLowerCase().includes(keyword.toLowerCase())
+  );
+
+  if (isTechnical && process.env.NODE_ENV === 'production') {
+    message = 'Something went wrong on our end. Please try again later.';
   }
 
   const isProduction = process.env.NODE_ENV === 'production';

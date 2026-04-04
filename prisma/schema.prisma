@@ -1,7 +1,7 @@
 // schema.prisma
 
 datasource db {
-  provider = "postgresql"
+  provider  = "postgresql"
 }
 
 generator client {
@@ -49,6 +49,7 @@ model Category {
   isSystem          Boolean            @default(false)
 
   @@unique([name, userId])
+  @@index([userId])
 }
 
 model LedgerEntry {
@@ -65,6 +66,10 @@ model LedgerEntry {
   receiptPublicId String?
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
+
+  @@index([userId])
+  @@index([date])
+  @@index([categoryId])
 }
 
 model RecurringEntry {
@@ -87,6 +92,9 @@ model RecurringEntry {
   lastStatusDate DateTime?
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
+
+  @@index([userId])
+  @@index([nextExecution, isActive])
 }
 
 model Budget {
@@ -100,6 +108,7 @@ model Budget {
   userId      String
 
   @@unique([categoryId, month, year, userId])
+  @@index([userId])
 }
 
 enum LedgerEntryType {

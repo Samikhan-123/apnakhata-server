@@ -1,7 +1,7 @@
 import prisma from './src/config/prisma.js';
 import bcrypt from 'bcrypt';
 
-const email = 'admin@gmail.com';
+const email = 'samikhan7816@gmail.com';
 const name = 'iamadmin';
 const password = 'Admin@123'; // Default temporary password
 
