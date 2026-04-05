@@ -11,12 +11,14 @@ export const globalErrorHandler = (
   let statusCode = err.statusCode || 500;
   let message = err.message || 'Internal Server Error';
 
-  // Log all 500 errors for internal tracking (even in production)
-  if (statusCode === 500) {
-    logger.error(`${req.method} ${req.path}`, {
-      statusCode,
+  const isProduction = process.env.NODE_ENV === 'production';
+
+  // Log to terminal in development OR log critical errors (500) in production
+  if (!isProduction || statusCode === 500) {
+    const logMethod = statusCode === 500 ? 'error' : 'warn';
+    logger[logMethod](`${req.method} ${req.path} [${statusCode}]`, {
       message,
-      stack: err.stack,
+      stack: err.cause?.stack || err.stack, // Prefer original cause stack if available
       body: req.body,
       params: req.params,
       query: req.query,
@@ -58,28 +60,36 @@ export const globalErrorHandler = (
     message.toLowerCase().includes(keyword.toLowerCase())
   );
 
-  if (isTechnical && process.env.NODE_ENV === 'production') {
+  if (isTechnical && isProduction) {
     message = 'Something went wrong on our end. Please try again later.';
   }
-
-  const isProduction = process.env.NODE_ENV === 'production';
 
   // Response
   res.status(statusCode).json({
     success: false,
     message,
-    ...(isProduction ? {} : { stack: err.stack, error: err })
+    ...(isProduction ? {} : { 
+      stack: err.cause?.stack || err.stack, 
+      originalError: err.cause?.message || err.message,
+      code: err.code 
+    })
   });
 };
 
 export class AppError extends Error {
   statusCode: number;
   isOperational: boolean;
+  cause?: any;
 
-  constructor(message: string, statusCode: number) {
+  constructor(message: string, statusCode: number, cause?: any) {
     super(message);
     this.statusCode = statusCode;
     this.isOperational = true;
+    this.cause = cause;
+
+    if (cause && cause.stack) {
+       this.stack = `${this.stack}\n\n[ORIGINAL CAUSE STACK]:\n${cause.stack}`;
+    }
 
     Error.captureStackTrace(this, this.constructor);
   }

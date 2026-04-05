@@ -9,7 +9,7 @@ import { generateToken } from '../../utils/auth.js';
 import mailService from './mail.service.js';
 import axios from 'axios';
 
-const googleClient = new OAuth2Client(process.env.CLIENT_ID);
+const googleClient = new OAuth2Client(process.env.APNAKHATA_GOOGLE_LOGIN_CLIENT_ID);
 
 export class AuthService {
   /**
@@ -180,16 +180,16 @@ export class AuthService {
     try {
       let payload;
 
-      // Check if it's a JWT (idToken) or opaque (accessToken)
-      if (googleToken.includes('.')) {
+      // Check if it's a JWT (idToken - 3 segments) or opaque (accessToken - typically ya29... format)
+      if (googleToken.split('.').length === 3) {
         const ticket = await googleClient.verifyIdToken({
           idToken: googleToken,
-          audience: process.env.CLIENT_ID,
+          audience: process.env.APNAKHATA_GOOGLE_LOGIN_CLIENT_ID,
         });
         payload = ticket.getPayload();
       } else {
         // Fetch profile using accessToken
-        const response = await axios.get('https://www.googleapis.com/oauth2/v3/userinfo', {
+        const response = await axios.get(process.env.APNAKHATA_GOOGLE_LOGIN_USERINFO_URL || 'https://www.googleapis.com/oauth2/v3/userinfo', {
           headers: { Authorization: `Bearer ${googleToken}` }
         });
         payload = response.data;
@@ -252,7 +252,7 @@ export class AuthService {
       };
     } catch (error: any) {
       if (error instanceof AppError) throw error;
-      throw new AppError('Google authentication failed', 401);
+      throw new AppError('Google authentication failed', 401, error);
     }
   }
 }
