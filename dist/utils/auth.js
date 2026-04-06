@@ -2,12 +2,15 @@ import 'dotenv/config';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 const SALT_ROUNDS = 10;
+// hash password  
 export const hashPassword = async (password) => {
     return bcrypt.hash(password, SALT_ROUNDS);
 };
+// compare password 
 export const comparePassword = async (password, hash) => {
     return bcrypt.compare(password, hash);
 };
+// generate token 
 export const generateToken = (id) => {
     const secret = process.env.JWT_SECRET;
     if (!secret) {

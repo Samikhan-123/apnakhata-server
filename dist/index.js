@@ -6,6 +6,7 @@ import morgan from 'morgan';
 import { createServer } from 'http';
 import dotenv from 'dotenv';
 dotenv.config();
+// routes imports
 import authRoutes from './modules/auth/auth.routes.js';
 import ledgerEntryRoutes from './modules/ledger-entry/ledger-entry.routes.js';
 import recurringRoutes from './modules/recurring/recurring.routes.js';

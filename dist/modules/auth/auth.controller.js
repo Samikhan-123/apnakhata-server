@@ -21,7 +21,7 @@ export class AuthController {
         }
     }
     /**
-     * Authenticate a user
+     * Authenticate user
      */
     async login(req, res, next) {
         try {

@@ -1,4 +1,6 @@
 import { baseTemplate } from './base.template.js';
+// src/templates/email/welcome.template.ts
+// for welcome template
 export const welcomeTemplate = (name, otp) => {
     const content = `
     <h2 style="color: #2563eb; font-size: 24px; font-weight: 800; tracking-tight: -0.025em; margin-bottom: 24px;">Welcome to the family, ${name}!</h2>

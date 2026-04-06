@@ -20,7 +20,7 @@ export class MailService {
         });
     }
     async sendPasswordResetOTP(email, otp) {
-        const html = verificationTemplate(otp); // Reuse verification template for OTP display
+        const html = verificationTemplate(otp);
         await sendEmail({
             to: email,
             subject: 'Reset your password code - Apna Khata',

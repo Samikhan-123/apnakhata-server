@@ -7,6 +7,10 @@ export declare class AdminService {
         totalEntries: number;
         totalVolume: number;
         newUsersLast30Days: number;
+        userTrends: {
+            month: string;
+            count: number;
+        }[];
     }>;
     /**
      * Get all users with basic info

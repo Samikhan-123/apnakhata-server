@@ -1,4 +1,5 @@
 import { z } from 'zod';
+// schema for budget validation
 export const createBudgetSchema = z.object({
     categoryId: z.string(),
     limit: z.number().positive('Limit must be a positive number'),

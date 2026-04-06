@@ -1,3 +1,4 @@
+// export service for ledger entries
 export class ExportService {
     generateCSV(entries) {
         const header = ['Date', 'Description', 'Amount', 'Type', 'Category'];

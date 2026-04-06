@@ -32,11 +32,11 @@ export const createLedgerEntrySchema = baseLedgerEntrySchema.superRefine((data, 
 });
 export const updateLedgerEntrySchema = baseLedgerEntrySchema.partial();
 export const ledgerEntryFiltersSchema = z.object({
-    startDate: z.string().optional(),
-    endDate: z.string().optional(),
-    categoryId: z.string().cuid().optional(),
-    type: ledgerEntryTypeSchema.optional(),
-    search: z.string().optional(),
+    startDate: z.preprocess((val) => (val === '' ? undefined : val), z.string().optional()),
+    endDate: z.preprocess((val) => (val === '' ? undefined : val), z.string().optional()),
+    categoryId: z.preprocess((val) => (val === '' || val === 'all' ? undefined : val), z.string().cuid().optional()),
+    type: z.preprocess((val) => (val === '' || val === 'all' ? undefined : val), ledgerEntryTypeSchema.optional()),
+    search: z.preprocess((val) => (val === '' ? undefined : val), z.string().optional()),
     page: z.string().optional().default('1').transform(Number),
     limit: z.string().optional().default('20').transform(Number),
 });

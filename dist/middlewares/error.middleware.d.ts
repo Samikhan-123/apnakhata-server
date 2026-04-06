@@ -3,5 +3,6 @@ export declare const globalErrorHandler: (err: any, req: Request, res: Response,
 export declare class AppError extends Error {
     statusCode: number;
     isOperational: boolean;
-    constructor(message: string, statusCode: number);
+    cause?: any;
+    constructor(message: string, statusCode: number, cause?: any);
 }

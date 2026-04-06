@@ -56,7 +56,7 @@ export class RecurringService {
                     // 1. Create Ledger Entry
                     await ledgerEntryRepository.create(entry.userId, {
                         amount: Number(entry.amount),
-                        description: `[recurring] ${entry.description}`,
+                        description: `[auto-completed] ${entry.description}`,
                         type: entry.type,
                         categoryId: entry.categoryId || undefined,
                         date: new Date().toISOString(),
@@ -140,7 +140,7 @@ export class RecurringService {
             }
             await ledgerEntryRepository.create(entry.userId, {
                 amount: Number(entry.amount),
-                description: `[recurring] ${entry.description}`,
+                description: `[auto-completed] ${entry.description}`,
                 type: entry.type,
                 categoryId: entry.categoryId || undefined,
                 date: new Date().toISOString(),

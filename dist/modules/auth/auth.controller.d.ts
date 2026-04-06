@@ -5,7 +5,7 @@ export declare class AuthController {
      */
     register(req: Request, res: Response, next: NextFunction): Promise<void>;
     /**
-     * Authenticate a user
+     * Authenticate user
      */
     login(req: Request, res: Response, next: NextFunction): Promise<void>;
     /**

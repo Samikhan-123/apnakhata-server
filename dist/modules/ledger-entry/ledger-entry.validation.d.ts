@@ -29,15 +29,15 @@ export declare const updateLedgerEntrySchema: z.ZodObject<{
     tags: z.ZodOptional<z.ZodOptional<z.ZodArray<z.ZodString>>>;
 }, z.core.$strip>;
 export declare const ledgerEntryFiltersSchema: z.ZodObject<{
-    startDate: z.ZodOptional<z.ZodString>;
-    endDate: z.ZodOptional<z.ZodString>;
-    categoryId: z.ZodOptional<z.ZodString>;
-    type: z.ZodOptional<z.ZodEnum<{
+    startDate: z.ZodPipe<z.ZodTransform<unknown, unknown>, z.ZodOptional<z.ZodString>>;
+    endDate: z.ZodPipe<z.ZodTransform<unknown, unknown>, z.ZodOptional<z.ZodString>>;
+    categoryId: z.ZodPipe<z.ZodTransform<unknown, unknown>, z.ZodOptional<z.ZodString>>;
+    type: z.ZodPipe<z.ZodTransform<unknown, unknown>, z.ZodOptional<z.ZodEnum<{
         INCOME: "INCOME";
         EXPENSE: "EXPENSE";
         TRANSFER: "TRANSFER";
-    }>>;
-    search: z.ZodOptional<z.ZodString>;
+    }>>>;
+    search: z.ZodPipe<z.ZodTransform<unknown, unknown>, z.ZodOptional<z.ZodString>>;
     page: z.ZodPipe<z.ZodDefault<z.ZodOptional<z.ZodString>>, z.ZodTransform<number, string>>;
     limit: z.ZodPipe<z.ZodDefault<z.ZodOptional<z.ZodString>>, z.ZodTransform<number, string>>;
 }, z.core.$strip>;

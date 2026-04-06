@@ -7,13 +7,13 @@ export declare const CreateRecurringSchema: z.ZodObject<{
         INCOME: "INCOME";
         EXPENSE: "EXPENSE";
         TRANSFER: "TRANSFER";
-    }>;
+    }> & z.ZodType<"INCOME" | "EXPENSE", "INCOME" | "EXPENSE" | "TRANSFER", z.core.$ZodTypeInternals<"INCOME" | "EXPENSE", "INCOME" | "EXPENSE" | "TRANSFER">>;
     frequency: z.ZodEnum<{
         TEN_SECONDS: "TEN_SECONDS";
         DAILY: "DAILY";
         WEEKLY: "WEEKLY";
         MONTHLY: "MONTHLY";
         YEARLY: "YEARLY";
-    }>;
+    }> & z.ZodType<"DAILY" | "WEEKLY" | "MONTHLY" | "YEARLY", "TEN_SECONDS" | "DAILY" | "WEEKLY" | "MONTHLY" | "YEARLY", z.core.$ZodTypeInternals<"DAILY" | "WEEKLY" | "MONTHLY" | "YEARLY", "TEN_SECONDS" | "DAILY" | "WEEKLY" | "MONTHLY" | "YEARLY">>;
 }, z.core.$strip>;
 export type CreateRecurringInput = z.infer<typeof CreateRecurringSchema>;

@@ -22,7 +22,9 @@ export class BudgetService {
                     amount: true,
                 },
             });
+            // calculate spent amount
             const spentAmount = Number(spent._sum.amount || 0);
+            // calculate progress
             const progress = budget.limit.toNumber() > 0
                 ? (spentAmount / budget.limit.toNumber()) * 100
                 : 0;

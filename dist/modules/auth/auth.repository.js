@@ -5,6 +5,7 @@ export class AuthRepository {
             where: { email },
         });
     }
+    // find by id 
     async findById(id) {
         return await prisma.user.findUnique({
             where: { id },
@@ -18,6 +19,7 @@ export class AuthRepository {
             }
         });
     }
+    // create user 
     async create(data) {
         return await prisma.user.create({
             data: {
@@ -31,12 +33,14 @@ export class AuthRepository {
             }
         });
     }
+    // update user 
     async update(id, data) {
         return await prisma.user.update({
             where: { id },
             data
         });
     }
+    // find by reset token 
     async findByResetToken(token) {
         return await prisma.user.findFirst({
             where: {

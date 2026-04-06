@@ -19,11 +19,31 @@ export class AdminService {
                 createdAt: { gte: thirtyDaysAgo }
             }
         });
+        // Get User Trends (Last 6 Months)
+        const userTrends = [];
+        const now = new Date();
+        for (let i = 5; i >= 0; i--) {
+            const monthDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            const nextMonthDate = new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
+            const count = await prisma.user.count({
+                where: {
+                    createdAt: {
+                        gte: monthDate,
+                        lt: nextMonthDate
+                    }
+                }
+            });
+            userTrends.push({
+                month: monthDate.toLocaleString('default', { month: 'short' }),
+                count
+            });
+        }
         return {
             totalUsers,
             totalEntries,
             totalVolume: Number(totalAmount._sum.amount || 0),
             newUsersLast30Days,
+            userTrends
         };
     }
     /**

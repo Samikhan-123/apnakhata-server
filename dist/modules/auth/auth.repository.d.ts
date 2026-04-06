@@ -29,7 +29,7 @@ export declare class AuthRepository {
         passwordHash: string;
         verificationToken?: string;
         verificationExpiry?: Date;
-        role?: string;
+        role?: 'ADMIN' | 'USER';
     }): Promise<{
         password: string | null;
         name: string | null;

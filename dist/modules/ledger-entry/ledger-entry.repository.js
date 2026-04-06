@@ -42,7 +42,7 @@ export class LedgerEntryRepository {
                     category: true,
                 },
                 orderBy: {
-                    date: 'desc',
+                    createdAt: 'desc',
                 },
                 skip,
                 take: limit,

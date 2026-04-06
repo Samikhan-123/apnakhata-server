@@ -28,7 +28,7 @@ export class RecurringRepository {
       include: {
         category: true,
       },
-      orderBy: { nextExecution: 'asc' }
+      orderBy: { createdAt: 'desc' }
     });
   }
 
