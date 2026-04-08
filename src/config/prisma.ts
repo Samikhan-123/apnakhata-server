@@ -1,4 +1,6 @@
-import { PrismaClient } from '@prisma/client';
+import logger from '../utils/logger.js';
+import pkg from '@prisma/client';
+const { PrismaClient } = pkg;
 import { PrismaPg } from '@prisma/adapter-pg';
 import pg from 'pg';
 import dotenv from 'dotenv';
@@ -7,17 +9,16 @@ dotenv.config();
 const connectionString = process.env.DATABASE_URL;
 
 if (!connectionString) {
-    console.error('DATABASE_URL is not defined in environment variables');
+    logger.error('DATABASE_URL is not defined in environment variables');
 }
 
 const pool = new pg.Pool({ connectionString });
 
 // Verify connection on startup
 pool.query('SELECT 1')
-    .then(() => console.log('✅ Database connection verified successfully!'))
+    .then(() => logger.info('✅ Database connection verified successfully!'))
     .catch((err: any) => {
-        console.error('❌ Database connection failed!');
-        console.error(err);
+        logger.error('❌ Database connection failed!', { error: err.message });
     });
 
 // @ts-ignore - pg type mismatch due to transitive dependencies in Prisma 7

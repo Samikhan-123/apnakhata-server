@@ -10,6 +10,7 @@ export declare class AuthService {
             name: string | null;
             isVerified: boolean;
             role: any;
+            createdAt: Date;
         };
         token: string;
     }>;
@@ -23,6 +24,7 @@ export declare class AuthService {
             name: string | null;
             isVerified: boolean;
             role: any;
+            createdAt: Date;
         };
         token: string;
     }>;
@@ -37,6 +39,7 @@ export declare class AuthService {
             name: string | null;
             isVerified: boolean;
             role: any;
+            createdAt: Date;
         };
         token: string;
     }>;
@@ -68,6 +71,7 @@ export declare class AuthService {
             name: string | null;
             isVerified: boolean;
             role: import("@prisma/client").$Enums.UserRole;
+            createdAt: Date;
         };
         token: string;
     }>;

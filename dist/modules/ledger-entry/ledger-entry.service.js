@@ -17,25 +17,7 @@ export class LedgerEntryService {
                 throw new AppError(`Insufficient funds. Your current balance is ${summary.remainingBalance}, but this expense is ${data.amount}.`, 400);
             }
         }
-        // Income Limit Rule: Only 3 income entries allowed per month
-        if (data.type === 'INCOME') {
-            const now = new Date();
-            const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-            const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
-            const incomeCount = await prisma.ledgerEntry.count({
-                where: {
-                    userId,
-                    type: 'INCOME',
-                    date: {
-                        gte: monthStart,
-                        lte: monthEnd
-                    }
-                }
-            });
-            if (incomeCount >= 3) {
-                throw new AppError('Monthly limit reached! You can only record 3 income entries per month to keep your records focused.', 400);
-            }
-        }
+        // Income limit removed to support daily/weekly earners. Focus is on total monthly liquidity.
         // Standard income/expense entry. Normalized to lowercase.
         return await ledgerEntryRepository.create(userId, data);
     }
