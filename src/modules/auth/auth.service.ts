@@ -43,7 +43,7 @@ export class AuthService {
 
     const token = generateToken(user.id);
     return { 
-      user: { id: user.id, email: user.email, name: user.name, isVerified: user.isVerified, role: (user as any).role }, 
+      user: { id: user.id, email: user.email, name: user.name, isVerified: user.isVerified, role: (user as any).role, createdAt: user.createdAt }, 
       token 
     };
   }
@@ -61,7 +61,7 @@ export class AuthService {
     const token = generateToken(user.id);
     
     return { 
-      user: { id: user.id, email: user.email, name: user.name, isVerified: user.isVerified, role: (user as any).role }, 
+      user: { id: user.id, email: user.email, name: user.name, isVerified: user.isVerified, role: (user as any).role, createdAt: user.createdAt }, 
       token 
     };
   }
@@ -91,7 +91,7 @@ export class AuthService {
 
     return { 
       message: 'Email verified successfully',
-      user: { id: user.id, email: user.email, name: user.name, isVerified: true, role: (user as any).role },
+      user: { id: user.id, email: user.email, name: user.name, isVerified: true, role: (user as any).role, createdAt: user.createdAt },
       token 
     };
   }
@@ -247,7 +247,7 @@ export class AuthService {
 
       const token = generateToken(user.id);
       return { 
-        user: { id: user.id, email: user.email, name: user.name, isVerified: user.isVerified, role: user.role }, 
+        user: { id: user.id, email: user.email, name: user.name, isVerified: user.isVerified, role: user.role, createdAt: user.createdAt }, 
         token 
       };
     } catch (error: any) {

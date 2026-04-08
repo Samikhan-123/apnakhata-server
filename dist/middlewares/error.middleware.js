@@ -40,7 +40,7 @@ export const globalErrorHandler = (err, req, res, next) => {
         }
         else {
             // Catch-all for other Prisma errors to avoid leaking internals
-            message = 'A database error occurred. Please try again later.';
+            message = 'Something went wrong. Please try again later.';
         }
     }
     // Final Sanitization: Ensure no raw Prisma/DB internal strings leak in the message

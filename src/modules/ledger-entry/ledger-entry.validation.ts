@@ -12,16 +12,12 @@ const baseLedgerEntrySchema = z.object({
 });
 
 export const createLedgerEntrySchema = baseLedgerEntrySchema.superRefine((data, ctx) => {
-  if (data.type === 'INCOME') {
-     const validSources = ['salary', 'business', 'freelance'];
-     const desc = data.description.toLowerCase();
-     if (!validSources.includes(desc)) {
-       ctx.addIssue({
-         code: z.ZodIssueCode.custom,
-         message: "Income source must be 'Salary', 'Business', or 'Freelance'",
-         path: ['description']
-       });
-     }
+  if (data.type === 'INCOME' && !data.description) {
+     ctx.addIssue({
+       code: z.ZodIssueCode.custom,
+       message: "Income source/description is required",
+       path: ['description']
+     });
   } else if (data.type === 'EXPENSE') {
      if (!data.categoryId) {
        ctx.addIssue({
