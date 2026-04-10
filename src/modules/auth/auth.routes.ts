@@ -5,46 +5,43 @@ import { authLimiter } from '../../middlewares/rate-limit.middleware.js';
 
 const router = Router();
 
-// Apply strict rate limiting to all auth routes
-router.use(authLimiter);
-
 /**
  * @route   POST /api/auth/register
  * @desc    Register a new user
  */
-router.post('/register', authController.register);
+router.post('/register', authLimiter, authController.register);
 
-router.post('/login', authController.login);
+router.post('/login', authLimiter, authController.login);
 
 /**
  * @route   POST /api/auth/google
  * @desc    Login/Signup with Google Button
  */
-router.post('/google', authController.googleLogin);
+router.post('/google', authLimiter, authController.googleLogin);
 
 /**
  * @route   POST /api/auth/verify-email
  * @desc    Verify email via OTP
  */
-router.post('/verify-email', authController.verifyEmail);
+router.post('/verify-email', authLimiter, authController.verifyEmail);
 
 /**
  * @route   POST /api/auth/resend-otp
  * @desc    Resend verification OTP
  */
-router.post('/resend-otp', authController.resendOTP);
+router.post('/resend-otp', authLimiter, authController.resendOTP);
 
 /**
  * @route   POST /api/auth/forgot-password
  * @desc    Request password reset link
  */
-router.post('/forgot-password', authController.forgotPassword);
+router.post('/forgot-password', authLimiter, authController.forgotPassword);
 
 /**
  * @route   POST /api/auth/reset-password
  * @desc    Reset password using token
  */
-router.post('/reset-password', authController.resetPassword);
+router.post('/reset-password', authLimiter, authController.resetPassword);
 
 /**
  * @route   GET /api/auth/me

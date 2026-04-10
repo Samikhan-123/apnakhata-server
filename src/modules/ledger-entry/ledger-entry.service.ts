@@ -45,6 +45,34 @@ export class LedgerEntryService {
   }
 
   /**
+   * Helper to check if a transaction date is locked for editing/deletion
+   */
+  private isDateLocked(date: Date): boolean {
+    const now = new Date();
+    const today = now.getDate();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    
+    const targetMonth = date.getMonth();
+    const targetYear = date.getFullYear();
+
+    // 1. Current Month transactions are never locked
+    if (targetMonth === currentMonth && targetYear === currentYear) return false;
+
+    // 2. Previous Month Audit Protection with 2-Day Grace Period
+    const isPrevMonth = (targetYear === currentYear && targetMonth === currentMonth - 1) ||
+                        (targetYear === currentYear - 1 && targetMonth === 11 && currentMonth === 0);
+
+    if (isPrevMonth) {
+      // Allowed only on 1st and 2nd of current month
+      return today > 2;
+    }
+
+    // 3. Older than previous month is always locked
+    return true;
+  }
+
+  /**
    * Delete a ledger entry
    */
   async delete(userId: string, id: string) {
@@ -52,12 +80,12 @@ export class LedgerEntryService {
     if (!entry) {
       throw new AppError('Ledger entry not found', 404);
     }
-    // No audit protection rule for now, simple deletion as per user's "single source" request?
-    // User didn't specify blocking delete here, but previously they wanted categories locked.
-    // I'll keep the income-entry lock for now as it's a good practice unless asked otherwise.
-    if (entry.type === 'INCOME') {
-      throw new AppError('Income entries are permanent for audit integrity.', 400);
+    
+    // Check historical lock
+    if (this.isDateLocked(new Date(entry.date))) {
+      throw new AppError('Historical records from previous months are locked for audit integrity.', 400);
     }
+
     await ledgerEntryRepository.delete(id, userId);
     auditLog('LEDGER_ENTRY_DELETE', userId, { entryId: id, amount: entry.amount, type: entry.type });
     return { success: true };
@@ -70,6 +98,16 @@ export class LedgerEntryService {
     const existingEntry = await ledgerEntryRepository.findById(id, userId);
     if (!existingEntry) {
       throw new AppError('Ledger entry not found', 404);
+    }
+
+    // Check historical lock (Original Date)
+    if (this.isDateLocked(new Date(existingEntry.date))) {
+      throw new AppError('Historical records from previous months are locked for audit integrity.', 400);
+    }
+
+    // Check historical lock (New Date if being changed)
+    if (data.date && this.isDateLocked(new Date(data.date))) {
+      throw new AppError('Cannot move transactions into locked historical months.', 400);
     }
 
     // Income First Rule for Updates
@@ -88,16 +126,6 @@ export class LedgerEntryService {
       
       if (adjustedBalance < newAmount) {
         throw new AppError(`Insufficient funds. Your available balance (adjusting for this entry) is ${adjustedBalance}, but the new amount is ${newAmount}.`, 400);
-      }
-    }
-
-    // Rule: Salary entries (salary/job) can only be edited within their specific month
-    const isSalary = existingEntry.description.toLowerCase() === 'salary';
-    if (isSalary) {
-      const now = new Date();
-      const entryDate = new Date(existingEntry.date);
-      if (entryDate.getMonth() !== now.getMonth() || entryDate.getFullYear() !== now.getFullYear()) {
-         throw new AppError('Salary records from previous months are locked for audit integrity.', 400);
       }
     }
 

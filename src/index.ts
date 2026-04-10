@@ -39,7 +39,7 @@ app.get('/health', (req: Request, res: Response) => {
 });
 
 // Routes
-app.use('/api/auth', authLimiter, authRoutes);
+app.use('/api/auth', authRoutes);
 app.use('/api/ledger-entries', dashboardMiddleware, ledgerEntryRoutes);
 app.use('/api/recurring', dashboardMiddleware, recurringRoutes);
 app.use('/api/categories', dashboardMiddleware, categoryRoutes);

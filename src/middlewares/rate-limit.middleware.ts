@@ -17,14 +17,14 @@ export const apiLimiter = rateLimit({
 
 /**
  * Sensitive Auth Rate Limiter
- * 5 requests per minute
+ * 5 requests per 5 minutes
  */
 export const authLimiter = rateLimit({
-  windowMs: 1 * 60 * 1000, // 1 minute
+  windowMs: 5 * 60 * 1000, // 5 minutes
   max: 5,
   message: {
     success: false,
-    message: 'Too many authentication attempts. Please try again after a minute'
+    message: 'Too many authentication attempts. Please try again after 5 minutes'
   },
   standardHeaders: true,
   legacyHeaders: false,

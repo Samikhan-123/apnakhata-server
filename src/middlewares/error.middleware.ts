@@ -27,10 +27,17 @@ export const globalErrorHandler = (
   }
 
   // Zod Validation Errors
-  if (err instanceof z.ZodError || err.name === 'ZodError') {
+  if (err.name === 'ZodError' || err instanceof z.ZodError || (Array.isArray(err.errors) && err.errors[0]?.path)) {
     statusCode = 400;
     const firstIssue = err.errors?.[0];
-    message = firstIssue ? `${firstIssue.path.join('.')}: ${firstIssue.message}` : 'Validation Error';
+    
+    // Format: "description: Description must be at least 3 characters"
+    if (firstIssue) {
+      const field = firstIssue.path.join('.');
+      message = field ? `${field}: ${firstIssue.message}` : firstIssue.message;
+    } else {
+      message = 'Validation Error';
+    }
     
     return res.status(statusCode).json({
       success: false,

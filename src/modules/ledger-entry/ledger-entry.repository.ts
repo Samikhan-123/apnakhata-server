@@ -46,9 +46,10 @@ export class LedgerEntryRepository {
         include: {
           category: true,
         },
-        orderBy: {
-          createdAt: 'desc',
-        },
+        orderBy: [
+          { date: 'desc' },
+          { createdAt: 'desc' }
+        ],
         skip,
         take: limit,
       }),
@@ -69,7 +70,7 @@ export class LedgerEntryRepository {
 
   async getFinancialSummary(userId: string, filters: { startDate?: string | Date; endDate?: string | Date; categoryId?: string; search?: string } = {}) {
     const { startDate, endDate, categoryId, search } = filters;
-    
+
     // Common date and search filters
     const commonFilter = {
       ...(startDate || endDate ? {
