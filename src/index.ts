@@ -19,9 +19,13 @@ import { authenticate, authorizeVerified } from './middlewares/auth.middleware.j
 import { authLimiter } from './middlewares/rate-limit.middleware.js';
 import { initRecurringCron } from './modules/recurring/recurring.cron.js';
 import adminRoutes from './modules/admin/admin.routes.js';
+import logger from './utils/logger.js';
 import prisma from './config/prisma.js'; // Trigger DB check
 
 const app = express();
+
+// Trust proxy for rate limiter (required for Vercel/proxies)
+app.set('trust proxy', 1);
 
 const dashboardMiddleware = [authenticate, authorizeVerified];
 
@@ -58,7 +62,7 @@ const PORT = process.env.PORT || 5000;
 const httpServer = createServer(app);
 
 httpServer.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+  logger.info(`🚀 Server running on port ${PORT}`);
   initRecurringCron();
 });
 
