@@ -13,6 +13,8 @@ router.post('/register', authLimiter, authController.register);
 
 router.post('/login', authLimiter, authController.login);
 
+router.post('/logout', authController.logout);
+
 /**
  * @route   POST /api/auth/google
  * @desc    Login/Signup with Google Button

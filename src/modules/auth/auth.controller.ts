@@ -9,6 +9,13 @@ import {
 } from './auth.validation.js';
 import { AppError } from '../../middlewares/error.middleware.js';
 
+const COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: 'strict' as const,
+  maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+};
+
 export class AuthController {
   /**
    * Register a new user 
@@ -18,11 +25,11 @@ export class AuthController {
       const validatedData = registerSchema.parse(req.body);
       const { user, token } = await authService.register(validatedData);
 
+      res.cookie('token', token, COOKIE_OPTIONS);
       res.status(201).json({
         success: true,
         message: 'Account created! Please check your email for the verification code.',
-        user,
-        token
+        user
       });
     } catch (error) {
       next(error);
@@ -37,11 +44,11 @@ export class AuthController {
       const validatedData = loginSchema.parse(req.body);
       const { user, token } = await authService.login(validatedData);
 
+      res.cookie('token', token, COOKIE_OPTIONS);
       res.status(200).json({
         success: true,
         message: 'Welcome back!',
-        user,
-        token
+        user
       });
     } catch (error) {
       next(error);
@@ -59,15 +66,29 @@ export class AuthController {
       }
       const { user, token } = await authService.googleLogin(idToken);
 
+      res.cookie('token', token, COOKIE_OPTIONS);
       res.status(200).json({
         success: true,
         message: 'Google login successful!',
-        user,
-        token
+        user
       });
     } catch (error) {
       next(error);
     }
+  }
+
+  /**
+   * Logout user
+   */
+  async logout(req: Request, res: Response) {
+    res.clearCookie('token', {
+      ...COOKIE_OPTIONS,
+      maxAge: 0
+    });
+    res.status(200).json({
+      success: true,
+      message: 'Logged out successfully'
+    });
   }
 
   /**

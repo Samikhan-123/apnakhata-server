@@ -10,14 +10,16 @@ export interface AuthRequest extends Request {
 
 export const authenticate = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      throw new AppError('Unauthorized - No token provided', 401);
+    // 1. Check Cookies (Primary for Web)
+    let token = req.cookies?.token;
+
+    // 2. Check Authorization Header (Fallback for API/Testing)
+    if (!token && req.headers.authorization?.startsWith('Bearer ')) {
+      token = req.headers.authorization.split(' ')[1];
     }
 
-    const token = authHeader.split(' ')[1];
     if (!token) {
-      throw new AppError('Unauthorized - Invalid token', 401);
+      throw new AppError('Unauthorized - Please log in to continue', 401);
     }
 
     const decoded = verifyToken(token);

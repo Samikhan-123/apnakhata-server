@@ -3,6 +3,7 @@ import * as Sentry from "@sentry/node";
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import cookieParser from 'cookie-parser';
 import { createServer } from 'http';
 import dotenv from 'dotenv';
 
@@ -32,6 +33,7 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 
 // Health Check
 app.get('/health', (req: Request, res: Response) => {
