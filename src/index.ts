@@ -30,14 +30,35 @@ app.set('trust proxy', true);
 const dashboardMiddleware = [authenticate, authorizeVerified];
 
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
-app.use(helmet());
+
+// CORS - Must be BEFORE helmet and at the top
 app.use(cors({
-  origin: [
-    process.env.FRONTEND_URL || 'http://localhost:3000',
-    'http://localhost:3000',
-    'https://apnakhata-client.vercel.app' // Explicit production fallback
-  ],
+  origin: (origin, callback) => {
+    // Diagnostic logging for production
+    if (!origin) return callback(null, true);
+    
+    // Normalize origins (remove trailing slashes for comparison)
+    const normalizedOrigin = origin.replace(/\/$/, "");
+    const allowedOrigins = [
+      (process.env.FRONTEND_URL || '').replace(/\/$/, ""),
+      'http://localhost:3000',
+      'https://apnakhata-client.vercel.app'
+    ].filter(Boolean);
+
+    if (allowedOrigins.includes(normalizedOrigin)) {
+      callback(null, true);
+    } else {
+      logger.warn(`[CORS-DEBUG] Origin ${origin} blocked. Allowed: ${allowedOrigins.join(', ')}`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
+}));
+
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" }
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
