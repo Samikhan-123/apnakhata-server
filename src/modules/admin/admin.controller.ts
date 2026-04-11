@@ -1,6 +1,7 @@
 import { Response, NextFunction } from 'express';
 import { AuthRequest } from '../../middlewares/auth.middleware.js';
 import adminService from './admin.service.js';
+import auditService from './audit.service.js';
 
 export class AdminController {
   async getStats(req: AuthRequest, res: Response, next: NextFunction) {
@@ -35,7 +36,8 @@ export class AdminController {
     try {
       const id = req.params.id as string;
       const { role, isVerified, isActive } = req.body;
-      const user = await adminService.updateUser(id, { role, isVerified, isActive });
+      const adminId = req.user.id;
+      const user = await adminService.updateUser(adminId, id, { role, isVerified, isActive });
       
       res.status(200).json({
         success: true,
@@ -55,6 +57,22 @@ export class AdminController {
       res.status(200).json({
         success: true,
         data: user
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getAuditLogs(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 15;
+      
+      const result = await auditService.getLogs(page, limit);
+      res.status(200).json({
+        success: true,
+        data: result.logs,
+        pagination: result.pagination
       });
     } catch (error) {
       next(error);

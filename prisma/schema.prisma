@@ -29,6 +29,8 @@ model User {
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
   isActive          Boolean            @default(true)
+  adminActions      AdminLog[]         @relation("AdminActions")
+  targetedLogs      AdminLog[]         @relation("TargetedLogs")
 }
 
 enum UserRole {
@@ -124,4 +126,19 @@ enum Frequency {
   WEEKLY
   MONTHLY
   YEARLY
+}
+
+model AdminLog {
+  id        String   @id @default(cuid())
+  adminId   String
+  admin     User     @relation("AdminActions", fields: [adminId], references: [id])
+  action    String   
+  targetId  String?  
+  target    User?    @relation("TargetedLogs", fields: [targetId], references: [id])
+  details   Json?    
+  createdAt DateTime @default(now())
+
+  @@index([adminId])
+  @@index([targetId])
+  @@index([createdAt])
 }

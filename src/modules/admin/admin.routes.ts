@@ -31,5 +31,6 @@ router.patch('/users/:id', adminController.updateUser);
  * @desc    Get detailed user information and activity
  */
 router.get('/users/:id', adminController.getUserDetail);
+router.get('/audit-logs', adminController.getAuditLogs);
 
 export default router;

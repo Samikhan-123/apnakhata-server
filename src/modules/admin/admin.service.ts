@@ -1,16 +1,18 @@
 import prisma from '../../config/prisma.js';
+import auditService from './audit.service.js';
 
 export class AdminService {
   /**
    * Get system-wide statistics
    */
   async getSystemStats() {
-    const [totalUsers, totalEntries, totalAmount] = await Promise.all([
+    const [totalUsers, totalEntries, totalAmount, totalLogs] = await Promise.all([
       prisma.user.count(),
       prisma.ledgerEntry.count(),
       prisma.ledgerEntry.aggregate({
         _sum: { amount: true }
-      })
+      }),
+      prisma.adminLog.count()
     ]);
 
     // Get user growth (last 30 days)
@@ -51,7 +53,8 @@ export class AdminService {
       totalEntries,
       totalVolume: Number(totalAmount._sum.amount || 0),
       newUsersLast30Days,
-      userTrends
+      userTrends,
+      totalLogs
     };
   }
 
@@ -104,7 +107,7 @@ export class AdminService {
   /**
    * Update user role, verification status, or account status
    */
-  async updateUser(id: string, data: { role?: 'ADMIN' | 'USER', isVerified?: boolean, isActive?: boolean }) {
+  async updateUser(adminId: string, id: string, data: { role?: 'ADMIN' | 'USER', isVerified?: boolean, isActive?: boolean }) {
     // strict check: google users cannot be unverified
     if (data.isVerified === false) {
       const user = await prisma.user.findUnique({ where: { id }, select: { googleId: true } });
@@ -113,10 +116,22 @@ export class AdminService {
       }
     }
 
-    return await prisma.user.update({
+    const updatedUser = await prisma.user.update({
       where: { id },
       data
     });
+
+    // Determine the action for logging
+    let action = 'UPDATE_USER';
+    if (data.isActive === false) action = 'BAN_USER';
+    else if (data.isActive === true) action = 'REACTIVATE_USER';
+    else if (data.role === 'ADMIN') action = 'PROMOTE_ADMIN';
+    else if (data.role === 'USER') action = 'DEMOTE_USER';
+    else if (data.isVerified !== undefined) action = data.isVerified ? 'VERIFY_USER' : 'UNVERIFY_USER';
+
+    await auditService.log(adminId, action, id, data);
+
+    return updatedUser;
   }
 
   /**
