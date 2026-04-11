@@ -24,8 +24,8 @@ import prisma from './config/prisma.js'; // Trigger DB check
 
 const app = express();
 
-// Trust proxy for rate limiter (required for Vercel/proxies)
-app.set('trust proxy', 1);
+// Trust proxy (Required for Vercel/Render/proxies)
+app.set('trust proxy', true);
 
 const dashboardMiddleware = [authenticate, authorizeVerified];
 
