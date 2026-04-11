@@ -32,7 +32,11 @@ const dashboardMiddleware = [authenticate, authorizeVerified];
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 app.use(helmet());
 app.use(cors({
-  origin: [process.env.FRONTEND_URL || 'http://localhost:3000', 'http://localhost:3000'],
+  origin: [
+    process.env.FRONTEND_URL || 'http://localhost:3000',
+    'http://localhost:3000',
+    'https://apnakhata-client.vercel.app' // Explicit production fallback
+  ],
   credentials: true,
 }));
 app.use(express.json());
