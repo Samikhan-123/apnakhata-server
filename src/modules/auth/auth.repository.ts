@@ -17,6 +17,7 @@ export class AuthRepository {
         email: true,
         name: true,
         isVerified: true,
+        isActive: true,
         role: true,
         createdAt: true,
       }

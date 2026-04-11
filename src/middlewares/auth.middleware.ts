@@ -40,6 +40,10 @@ export const authenticate = async (req: AuthRequest, res: Response, next: NextFu
       throw new AppError('Unauthorized - User not found', 401);
     }
 
+    if (!user.isActive) {
+      throw new AppError('Your account has been deactivated. Please contact support.', 401);
+    }
+
     req.user = user;
     next();
   } catch (error: any) {

@@ -58,6 +58,10 @@ export class AuthService {
       throw new AppError('Invalid email or password', 401);
     }
 
+    if (!user.isActive) {
+      throw new AppError('Your account has been deactivated. Please contact support.', 403);
+    }
+
     const token = generateToken(user.id);
     
     return { 
@@ -208,6 +212,10 @@ export class AuthService {
         // Rule: Existing standard users cannot login with Google if they didn't sign up with it
         if (!user.googleId) {
           throw new AppError('This email is registered with a password. Please login using your email and password.', 403);
+        }
+
+        if (!user.isActive) {
+          throw new AppError('Your account has been deactivated. Please contact support.', 403);
         }
         
         // Update Google ID if it changed or was empty for some reason

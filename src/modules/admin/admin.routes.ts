@@ -26,4 +26,10 @@ router.get('/users', adminController.getUsers);
  */
 router.patch('/users/:id', adminController.updateUser);
 
+/**
+ * @route   GET /api/admin/users/:id
+ * @desc    Get detailed user information and activity
+ */
+router.get('/users/:id', adminController.getUserDetail);
+
 export default router;

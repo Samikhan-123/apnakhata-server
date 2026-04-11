@@ -56,37 +56,103 @@ export class AdminService {
   }
 
   /**
-   * Get all users with basic info
+   * Get all users with basic info and pagination
    */
-  async getAllUsers() {
-    return await prisma.user.findMany({
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        role: true,
-        isVerified: true,
-        createdAt: true,
-        _count: {
-          select: {
-            ledgerEntries: true
+  async getAllUsers(page: number = 1, limit: number = 10) {
+    const skip = (page - 1) * limit;
+
+    const [users, totalCount] = await Promise.all([
+      prisma.user.findMany({
+        skip,
+        take: limit,
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          role: true,
+          isVerified: true,
+          isActive: true,
+          googleId: true,
+          password: true,
+          createdAt: true,
+          _count: {
+            select: {
+              ledgerEntries: true,
+              categories: true,
+              budgets: true
+            }
           }
+        },
+        orderBy: {
+          createdAt: 'desc'
         }
-      },
-      orderBy: {
-        createdAt: 'desc'
+      }),
+      prisma.user.count()
+    ]);
+
+    return {
+      users,
+      pagination: {
+        totalCount,
+        totalPages: Math.ceil(totalCount / limit),
+        currentPage: page,
+        limit
       }
-    });
+    };
   }
 
   /**
-   * Update user role or verification status
+   * Update user role, verification status, or account status
    */
-  async updateUser(id: string, data: { role?: 'ADMIN' | 'USER', isVerified?: boolean }) {
+  async updateUser(id: string, data: { role?: 'ADMIN' | 'USER', isVerified?: boolean, isActive?: boolean }) {
+    // strict check: google users cannot be unverified
+    if (data.isVerified === false) {
+      const user = await prisma.user.findUnique({ where: { id }, select: { googleId: true } });
+      if (user?.googleId) {
+        throw new Error('Google users are automatically verified and cannot be unverified.');
+      }
+    }
+
     return await prisma.user.update({
       where: { id },
       data
     });
+  }
+
+  /**
+   * Get detailed information about a specific user
+   */
+  async getUserDetails(id: string) {
+    const user = await prisma.user.findUnique({
+      where: { id },
+      include: {
+        _count: {
+          select: {
+            ledgerEntries: true,
+            categories: true,
+            budgets: true,
+            recurringEntries: true
+          }
+        }
+      }
+    });
+
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    // Get last 5 transactions
+    const recentActivity = await prisma.ledgerEntry.findMany({
+      where: { userId: id },
+      take: 5,
+      orderBy: { date: 'desc' },
+      include: { category: true }
+    });
+
+    return {
+      ...user,
+      recentActivity
+    };
   }
 }
 
