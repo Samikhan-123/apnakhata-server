@@ -13,7 +13,10 @@ export const apiLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
-  validate: { xForwardedForHeader: false },
+  validate: { 
+    xForwardedForHeader: false,
+    trustProxy: false
+  },
 });
 
 /**
@@ -29,5 +32,8 @@ export const authLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
-  validate: { xForwardedForHeader: false },
+  validate: { 
+    xForwardedForHeader: false,
+    trustProxy: false
+  },
 });
