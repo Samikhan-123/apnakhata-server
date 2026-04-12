@@ -32,5 +32,6 @@ router.patch('/users/:id', adminController.updateUser);
  */
 router.get('/users/:id', adminController.getUserDetail);
 router.get('/audit-logs', adminController.getAuditLogs);
+router.get('/financial-stats', adminController.getFinancialStats);
 
 export default router;

@@ -88,6 +88,18 @@ export class AdminController {
       next(error);
     }
   }
+
+  async getFinancialStats(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const stats = await adminService.getFinancialStats();
+      res.status(200).json({
+        success: true,
+        data: stats
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export default new AdminController();
