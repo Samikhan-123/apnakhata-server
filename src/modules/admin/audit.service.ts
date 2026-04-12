@@ -29,17 +29,51 @@ export class AuditService {
   }
 
   /**
-   * Get audit logs with pagination
+   * Get audit logs with pagination and dynamic filtering
    */
-  async getLogs(page: number = 1, limit: number = 15) {
-    // Basic pagination safety
+  async getLogs(page: number = 1, limit: number = 15, filters: {
+    adminId?: string;
+    action?: string;
+    targetId?: string;
+    startDate?: string;
+    endDate?: string;
+    search?: string;
+  } = {}) {
+    // 1. Basic pagination safety
     const safePage = Math.max(1, page);
     const safeLimit = Math.max(1, Math.min(100, limit));
     const skip = (safePage - 1) * safeLimit;
 
+    // 2. Build dynamic where clause
+    const where: any = {};
+    if (filters.adminId) where.adminId = filters.adminId;
+    if (filters.action) where.action = filters.action;
+    if (filters.targetId) where.targetId = filters.targetId;
+
+    if (filters.search) {
+      const searchTerm = filters.search.toLowerCase();
+      where.OR = [
+        { admin: { email: { contains: searchTerm, mode: 'insensitive' } } },
+        { admin: { name: { contains: searchTerm, mode: 'insensitive' } } },
+        { target: { email: { contains: searchTerm, mode: 'insensitive' } } },
+        { target: { name: { contains: searchTerm, mode: 'insensitive' } } }
+      ];
+    }
+
+    if (filters.startDate || filters.endDate) {
+      where.createdAt = {};
+      if (filters.startDate) where.createdAt.gte = new Date(filters.startDate);
+      if (filters.endDate) {
+        const end = new Date(filters.endDate);
+        end.setHours(23, 59, 59, 999); // Inclusion of the entire end day
+        where.createdAt.lte = end;
+      }
+    }
+
     try {
       const [logs, totalCount] = await Promise.all([
         (prisma as any).adminLog.findMany({
+          where,
           skip,
           take: safeLimit,
           orderBy: { createdAt: 'desc' },
@@ -52,7 +86,7 @@ export class AuditService {
             }
           }
         }),
-        (prisma as any).adminLog.count()
+        (prisma as any).adminLog.count({ where })
       ]);
 
       return {

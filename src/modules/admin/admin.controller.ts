@@ -68,7 +68,17 @@ export class AdminController {
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 15;
       
-      const result = await auditService.getLogs(page, limit);
+      const { adminId, action, targetId, startDate, endDate, search } = req.query;
+
+      const result = await auditService.getLogs(page, limit, {
+        adminId: adminId as string,
+        action: action as string,
+        targetId: targetId as string,
+        startDate: startDate as string,
+        endDate: endDate as string,
+        search: search as string
+      });
+
       res.status(200).json({
         success: true,
         data: result.logs,
