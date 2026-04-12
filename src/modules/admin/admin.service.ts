@@ -279,7 +279,7 @@ export class AdminService {
       throw new Error('User not found');
     }
 
-    // Get last 5 transactions
+    // Get last 5 Records
     const recentActivity = await prisma.ledgerEntry.findMany({
       where: { userId: id },
       take: 5,

@@ -32,7 +32,7 @@ export class MaintenanceController {
       results.cleanup = await adminService.runMaintenanceCleanup();
       logger.info(`[MAINTENANCE] Cleanup Sub-task: Purged ${results.cleanup.accountsPurged} accounts and ${results.cleanup.logsPurged} logs.`);
 
-      // TASK B: Recurring Transactions (System-wide)
+      // TASK B: Recurring Records (System-wide)
       // Process all due recurring patterns for all active users.
       const recurringResults = await recurringService.processDueEntries();
       results.recurring = {

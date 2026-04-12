@@ -2,6 +2,8 @@
 
 The robust, enterprise-grade backend for **Apna Khata**, configured for high-security financial tracking and autonomous system maintenance. Built with **Node.js**, **Express**, **TypeScript**, and **Prisma ORM**.
 
+**Live Platform**: [apnakhata.online](https://apnakhata.online)
+
 ## ✨ Key Features
 
 - **Zero-Trust Administrative Hardening**: Comprehensive security guards preventing administrative self-lockout, self-deletion, and unauthorized role elevation. 

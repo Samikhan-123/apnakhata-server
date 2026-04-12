@@ -45,7 +45,7 @@ export class LedgerEntryService {
   }
 
   /**
-   * Helper to check if a transaction date is locked for editing/deletion
+   * Helper to check if a Record date is locked for editing/deletion
    */
   private isDateLocked(date: Date): boolean {
     const now = new Date();
@@ -56,7 +56,7 @@ export class LedgerEntryService {
     const targetMonth = date.getMonth();
     const targetYear = date.getFullYear();
 
-    // 1. Current Month transactions are never locked
+    // 1. Current Month Record are never locked
     if (targetMonth === currentMonth && targetYear === currentYear) return false;
 
     // 2. Previous Month Audit Protection with 2-Day Grace Period
@@ -107,7 +107,7 @@ export class LedgerEntryService {
 
     // Check historical lock (New Date if being changed)
     if (data.date && this.isDateLocked(new Date(data.date))) {
-      throw new AppError('Cannot move transactions into locked historical months.', 400);
+      throw new AppError('Cannot move Records into locked historical months.', 400);
     }
 
     // Income First Rule for Updates
