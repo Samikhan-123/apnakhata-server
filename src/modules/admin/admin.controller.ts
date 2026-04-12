@@ -49,6 +49,22 @@ export class AdminController {
     }
   }
 
+  async batchUsers(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const { ids, data } = req.body;
+      const adminId = req.user.id;
+      const result = await adminService.batchUpdateUsers(adminId, ids, data);
+      
+      res.status(200).json({
+        success: true,
+        data: result,
+        message: `Successfully updated ${result.count} users`
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async getUserDetail(req: AuthRequest, res: Response, next: NextFunction) {
     try {
       const id = req.params.id as string;

@@ -21,6 +21,12 @@ router.get('/stats', adminController.getStats);
 router.get('/users', adminController.getUsers);
 
 /**
+ * @route   PATCH /api/admin/users/batch
+ * @desc    Update multiple users at once
+ */
+router.patch('/users/batch', adminController.batchUsers);
+
+/**
  * @route   PATCH /api/admin/users/:id
  * @desc    Update user details (role, verification status)
  */

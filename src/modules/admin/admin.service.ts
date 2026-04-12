@@ -143,6 +143,42 @@ export class AdminService {
   }
 
   /**
+   * Batch update multiple users
+   */
+  async batchUpdateUsers(adminId: string, ids: string[], data: { role?: 'ADMIN' | 'USER', isVerified?: boolean, isActive?: boolean }) {
+    if (!ids || ids.length === 0) throw new Error('No user IDs provided');
+
+    // Safety: check if any of these are google users before unverifying
+    if (data.isVerified === false) {
+      const googleUsers = await prisma.user.count({
+        where: {
+          id: { in: ids },
+          googleId: { not: null }
+        }
+      });
+      if (googleUsers > 0) {
+        throw new Error(`Cannot unverify ${googleUsers} Google-authenticated accounts in this batch.`);
+      }
+    }
+
+    const result = await prisma.user.updateMany({
+      where: { id: { in: ids } },
+      data
+    });
+
+    // Determine the action for logging
+    let action = 'BATCH_UPDATE_USERS';
+    if (data.isActive === false) action = 'BATCH_BAN_USERS';
+    else if (data.isActive === true) action = 'BATCH_REACTIVATE_USERS';
+    else if (data.role) action = 'BATCH_ROLE_CHANGE';
+    else if (data.isVerified !== undefined) action = 'BATCH_VERIFY_USERS';
+
+    await auditService.log(adminId, action, 'SYSTEM_BATCH', { count: result.count, data, targetedIds: ids });
+
+    return result;
+  }
+
+  /**
    * Get detailed information about a specific user
    */
   async getUserDetails(id: string) {
