@@ -142,3 +142,11 @@ model AdminLog {
   @@index([targetId])
   @@index([createdAt])
 }
+
+model SystemSettings {
+  id                  String   @id @default("singleton")
+  maintenanceMode     Boolean  @default(false)
+  registrationEnabled Boolean  @default(true)
+  maxEntriesLimit     Int?     @default(5000)
+  updatedAt           DateTime @updatedAt
+}

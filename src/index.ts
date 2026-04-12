@@ -31,6 +31,8 @@ import { authenticate, authorizeVerified } from './middlewares/auth.middleware.j
 import { authLimiter } from './middlewares/rate-limit.middleware.js';
 import { initRecurringCron } from './modules/recurring/recurring.cron.js';
 import adminRoutes from './modules/admin/admin.routes.js';
+import { maintenanceGuard } from './middlewares/maintenance.middleware.js';
+import { getSystemStatus } from './modules/status/status.controller.js';
 import logger from './utils/logger.js';
 
 const app = express();
@@ -74,12 +76,16 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
+// Maintenance Guard (Global Platform Block)
+app.use(maintenanceGuard);
+
 // Health Check
 app.get('/health', (req: Request, res: Response) => {
   res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
 // Routes
+app.get('/api/status', getSystemStatus);
 app.use('/api/auth', authRoutes);
 app.use('/api/ledger-entries', dashboardMiddleware, ledgerEntryRoutes);
 app.use('/api/recurring', dashboardMiddleware, recurringRoutes);

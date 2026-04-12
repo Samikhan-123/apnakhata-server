@@ -6,6 +6,7 @@ import { RegisterInput, LoginInput, OTPInput, ResetPasswordInput } from './auth.
 import { AppError } from '../../middlewares/error.middleware.js';
 import authRepository from './auth.repository.js';
 import { generateToken } from '../../utils/auth.js';
+import settingsService from '../admin/settings.service.js';
 import mailService from './mail.service.js';
 import axios from 'axios';
 
@@ -16,6 +17,12 @@ export class AuthService {
    * Register a new user and send verification OTP
    */
   async register(data: RegisterInput) {
+    // Check if registration is enabled globally
+    const isRegEnabled = await settingsService.isRegistrationEnabled();
+    if (!isRegEnabled && data.email !== process.env.ADMIN_EMAIL) {
+      throw new AppError('Public registration is currently disabled by the administrator.', 403);
+    }
+
     const existingUser = await authRepository.findByEmail(data.email);
 
     if (existingUser) {
@@ -227,6 +234,12 @@ export class AuthService {
         }
       } else {
         // 2. Create new Google user
+        // Check if registration is enabled globally
+        const isRegEnabled = await settingsService.isRegistrationEnabled();
+        if (!isRegEnabled && email !== process.env.ADMIN_EMAIL) {
+          throw new AppError('Public registration is currently disabled by the administrator.', 403);
+        }
+
         user = await prisma.user.create({
           data: {
             email,

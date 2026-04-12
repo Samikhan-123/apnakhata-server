@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import adminController from './admin.controller.js';
+import settingsController from './settings.controller.js';
 import { authenticate } from '../../middlewares/auth.middleware.js';
 import { isAdmin } from '../../middlewares/admin.middleware.js';
 
@@ -39,5 +40,17 @@ router.patch('/users/:id', adminController.updateUser);
 router.get('/users/:id', adminController.getUserDetail);
 router.get('/audit-logs', adminController.getAuditLogs);
 router.get('/financial-stats', adminController.getFinancialStats);
+
+/**
+ * @route   GET /api/admin/settings
+ * @desc    Get global platform settings
+ */
+router.get('/settings', settingsController.getSettings);
+
+/**
+ * @route   PATCH /api/admin/settings
+ * @desc    Update global platform settings
+ */
+router.patch('/settings', settingsController.updateSettings);
 
 export default router;
