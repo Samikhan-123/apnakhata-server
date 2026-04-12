@@ -159,6 +159,30 @@ export class AuthController {
       next(error);
     }
   }
+
+  /**
+   * Request self-deletion (30-day grace period)
+   */
+  async requestDeletion(req: any, res: Response, next: NextFunction) {
+    try {
+      const userId = req.user.id;
+      const user = await authService.requestSelfDeletion(userId);
+      
+      // Clear cookie immediately as they are now "deactivated"
+      res.clearCookie('token', {
+        ...COOKIE_OPTIONS,
+        maxAge: 0
+      });
+
+      res.status(200).json({
+        success: true,
+        data: user,
+        message: 'Your account has been scheduled for deletion. You have 30 days to contact support if you change your mind.'
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export default new AuthController();

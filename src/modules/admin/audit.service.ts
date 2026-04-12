@@ -7,16 +7,16 @@ export class AuditService {
   /**
    * Log an administrative action
    */
-  async log(adminId: string, action: string, targetId?: string, details?: any) {
-    if (!adminId || !action) {
-      logger.warn('[AUDIT] Attempted to log without adminId or action');
+  async log(adminId: string | null, action: string, targetId?: string, details?: any) {
+    if (!action) {
+      logger.warn('[AUDIT] Attempted to log without action');
       return;
     }
 
     try {
       await (prisma as any).adminLog.create({
         data: {
-          adminId,
+          adminId: adminId || null,
           action,
           targetId,
           details: details ? details : undefined

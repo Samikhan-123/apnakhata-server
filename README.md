@@ -1,17 +1,20 @@
 # Apna Khata - Server 🛠️
 
-The robust, modular backend for **Apna Khata**, an advanced personal expense tracker and financial management platform. Built with **Node.js**, **Express**, **TypeScript**, and **Prisma ORM**.
+The robust, enterprise-grade backend for **Apna Khata**, configured for high-security financial tracking and autonomous system maintenance. Built with **Node.js**, **Express**, **TypeScript**, and **Prisma ORM**.
 
 ## ✨ Key Features
 
-- **Modular Architecture**: Built using a clean, tiered structure with Controllers, Services, and the Repository Pattern for maximum scalability.
-- **Role-Based Access Control (RBAC)**: Fine-grained permissions for Admin and User roles.
-- **Robust Authentication**: Secure JWT-based auth with OTP-based password recovery and email verification.
-- **Database Management**: High-performance PostgreSQL database management using **Prisma ORM**.
-- **Admin Analytics**: Sophisticated server-side logic for calculating system-wide metrics and user registration trends.
-- **Recurring Transactions**: Background processing (Cron) for automated recurring expense management.
-- **Production Ready**: Structured logging (Winston), security headers (Helmet), and error tracking (Sentry) integration.
-- **Email System**: Transactional email support for welcomes, OTPs, and alerts.
+- **Zero-Trust Administrative Hardening**: Comprehensive security guards preventing administrative self-lockout, self-deletion, and unauthorized role elevation. 
+- **Tiered Role-Based Access Control (RBAC)**:
+  - **ADMIN**: Full system control, infrastructure management, and secure auditing.
+  - **MODERATOR**: Staff-level access for user verification and account status management.
+  - **USER**: Individual financial management and secure data ownership.
+- **30-Day Account Deletion Lifecycle**: Implements a secure "Soft-Delete" observation period for account removals, allowing users to cancel deletion requests within a 30-day grace period before permanent erasure.
+- **Autonomous Maintenance Engine**: Serverless-compatible background task architecture for daily automated cleanup of expired accounts and 90-day-old administrative logs.
+- **Strategic Auditing**: A high-fidelity `AdminLog` system tracking every administrative action, from status changes to bulk operations, with humanized action identifiers.
+- **Modular Data Architecture**: Built with the **Service Pattern** and **Prisma ORM** for Type-Safe database operations and high-performance querying.
+- **Modern Authentication**: Secure session management featuring Google OAuth integration, JWT-based security, and OTP-led password recovery.
+- **Financial Intelligence API**: Specialized endpoints for calculating platform-wide interaction metrics and financial liquidity trends.
 
 ## 🛠️ Tech Stack
 
@@ -19,16 +22,16 @@ The robust, modular backend for **Apna Khata**, an advanced personal expense tra
 - **Framework**: [Express.js](https://expressjs.com/)
 - **Language**: [TypeScript](https://www.typescriptlang.org/)
 - **ORM**: [Prisma](https://www.prisma.io/)
-- **Database**: [PostgreSQL](https://www.postgresql.org/)
-- **Security**: [Bcrypt](https://github.com/kelektiv/node.bcrypt.js), [JWT](https://jwt.io/), [Helmet](https://helmetjs.github.io/)
-- **Logging**: [Winston](https://github.com/winstonjs/winston)
-- **Validation**: [Zod](https://zod.dev/)
+- **Database**: [PostgreSQL (Supabase)](https://www.postgresql.org/)
+- **Security Logic**: [Zod](https://zod.dev/) Validation & Custom RBAC Middleware
+- **Deployment**: Optimized for **Vercel Serverless Functions**
+- **Logging**: Structured Winston logging with Sentry integration
 
 ## 🚀 Getting Started
 
 1.  **Clone the Repository**:
     ```bash
-    git clone https://github.com/your-username/apnakhata-server.git
+    git clone https://github.com/Samikhan-123/apnakhata-server.git
     cd apnakhata-server
     ```
 
@@ -45,7 +48,7 @@ The robust, modular backend for **Apna Khata**, an advanced personal expense tra
 
 4.  **Database Migration**:
     ```bash
-    npx prisma migrate dev --name init
+    npx prisma migrate dev
     npx prisma generate
     ```
 
@@ -54,9 +57,9 @@ The robust, modular backend for **Apna Khata**, an advanced personal expense tra
     npm run dev
     ```
 
-## 🔗 Related Repositories
+## 🔗 Ecosystem
 
-- [Apna Khata - Frontend Client](https://github.com/your-username/apnakhata-client)
+- [Apna Khata - Frontend Client](https://github.com/Samikhan-123/apnakhata-client)
 
 ## 📄 License
 

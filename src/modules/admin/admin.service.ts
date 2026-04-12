@@ -1,3 +1,4 @@
+import { UserRole } from '@prisma/client';
 import prisma from '../../config/prisma.js';
 import auditService from './audit.service.js';
 
@@ -115,26 +116,61 @@ export class AdminService {
   /**
    * Update user role, verification status, or account status
    */
-  async updateUser(adminId: string, id: string, data: { role?: 'ADMIN' | 'USER', isVerified?: boolean, isActive?: boolean }) {
-    // strict check: google users cannot be unverified
-    if (data.isVerified === false) {
-      const user = await prisma.user.findUnique({ where: { id }, select: { googleId: true } });
-      if (user?.googleId) {
-        throw new Error('Google users are automatically verified and cannot be unverified.');
+  async updateUser(adminId: string, id: string, data: { role?: UserRole, isVerified?: boolean, isActive?: boolean }) {
+    // 1. Policy Check: Fetch acting admin and target user
+    const [actingAdmin, targetUser] = await Promise.all([
+      prisma.user.findUnique({ where: { id: adminId }, select: { role: true } }),
+      prisma.user.findUnique({ where: { id }, select: { role: true, googleId: true } })
+    ]);
+
+    const isSuperAdmin = actingAdmin?.role === UserRole.ADMIN;
+
+    // 2. Admin Protection: No one can modify another ADMIN
+    if (targetUser?.role === UserRole.ADMIN && id !== adminId) {
+      throw new Error('Forbidden: Administrative accounts are protected. You cannot modify another Administrator.');
+    }
+
+    // 3. Self-Protection: Admins cannot ban, unverify, or demote themselves
+    if (id === adminId) {
+      if (data.role || data.isActive === false || data.isVerified === false) {
+        throw new Error('Forbidden: You cannot ban, unverify, or change your own role. Please ask another Administrator if this is required.');
       }
+    }
+
+    // 3. Role Change Protection: Only ADMINs can change roles
+    if (data.role && !isSuperAdmin) {
+      throw new Error('Forbidden: Moderators are not authorized to change user roles.');
+    }
+
+    // 3. Status Change Protection: Moderators cannot ban Admins or other Moderators
+    if (data.isActive === false && !isSuperAdmin) {
+       if (targetUser?.role === UserRole.ADMIN || (targetUser?.role as any) === 'MODERATOR') {
+          throw new Error('Forbidden: Moderators cannot deactivate other staff members.');
+       }
+    }
+
+    // 4. Verification Check: Google users cannot be unverified
+    if (data.isVerified === false && targetUser?.googleId) {
+       throw new Error('Google users are automatically verified and cannot be unverified.');
+    }
+
+    // 5. Promotion Lockdown: Admins cannot create other Admins via the dashboard
+    if ((data.role as any) === UserRole.ADMIN) {
+      throw new Error('Forbidden: Administrative privileges can only be provisioned via direct system access for security integrity.');
     }
 
     const updatedUser = await prisma.user.update({
       where: { id },
-      data
+      data: data as any
     });
 
     // Determine the action for logging
     let action = 'UPDATE_USER';
     if (data.isActive === false) action = 'BAN_USER';
     else if (data.isActive === true) action = 'REACTIVATE_USER';
-    else if (data.role === 'ADMIN') action = 'PROMOTE_ADMIN';
-    else if (data.role === 'USER') action = 'DEMOTE_USER';
+    else if (data.role === UserRole.ADMIN) action = 'PROMOTE_ADMIN';
+    else if ((data.role as any) === 'MODERATOR') action = 'PROMOTE_MODERATOR';
+    else if (data.role === UserRole.USER) action = 'DEMOTE_USER';
     else if (data.isVerified !== undefined) action = data.isVerified ? 'VERIFY_USER' : 'UNVERIFY_USER';
 
     await auditService.log(adminId, action, id, data);
@@ -145,10 +181,53 @@ export class AdminService {
   /**
    * Batch update multiple users
    */
-  async batchUpdateUsers(adminId: string, ids: string[], data: { role?: 'ADMIN' | 'USER', isVerified?: boolean, isActive?: boolean }) {
+  async batchUpdateUsers(adminId: string, ids: string[], data: { role?: UserRole, isVerified?: boolean, isActive?: boolean }) {
     if (!ids || ids.length === 0) throw new Error('No user IDs provided');
 
-    // Safety: check if any of these are google users before unverifying
+    // 1. Policy Check: Fetch acting admin
+    const actingAdmin = await prisma.user.findUnique({ where: { id: adminId }, select: { role: true } });
+    const isSuperAdmin = actingAdmin?.role === UserRole.ADMIN;
+
+    // 2. Role Change Protection: Batch role changes are ADMIN only
+    if (data.role && !isSuperAdmin) {
+      throw new Error('Forbidden: Batch role modifications are restricted to full Administrators.');
+    }
+
+    // 2b. Promotion Lockdown: Admins cannot create other Admins via the dashboard
+    if ((data.role as any) === UserRole.ADMIN) {
+      throw new Error('Forbidden: Batch promotion to Administrator is strictly prohibited via the dashboard.');
+    }
+
+    // 3. Admin Protection: Batch updates cannot include other ADMINs
+    const adminTargets = await prisma.user.count({
+      where: {
+        id: { in: ids },
+        role: UserRole.ADMIN,
+        NOT: { id: adminId } // Exclude self if they somehow selected themselves
+      }
+    });
+    if (adminTargets > 0) {
+      throw new Error(`Forbidden: You cannot perform batch actions on ${adminTargets} other Administrators.`);
+    }
+
+    if (ids.includes(adminId)) {
+      throw new Error('Forbidden: You cannot include yourself in a batch administrative action.');
+    }
+
+    // 4. Protection: Moderators cannot batch-deactivate/ban anyone if the list contains staff
+    if (data.isActive === false && !isSuperAdmin) {
+      const moderatorCount = await prisma.user.count({
+        where: {
+          id: { in: ids },
+          role: 'MODERATOR' as any
+        }
+      });
+      if (moderatorCount > 0) {
+        throw new Error(`Forbidden: You cannot deactivate ${moderatorCount} staff members in this batch.`);
+      }
+    }
+
+    // 4. Verification Check: No un-verifying Google users
     if (data.isVerified === false) {
       const googleUsers = await prisma.user.count({
         where: {
@@ -173,7 +252,7 @@ export class AdminService {
     else if (data.role) action = 'BATCH_ROLE_CHANGE';
     else if (data.isVerified !== undefined) action = 'BATCH_VERIFY_USERS';
 
-    await auditService.log(adminId, action, 'SYSTEM_BATCH', { count: result.count, data, targetedIds: ids });
+    await auditService.log(adminId, action, undefined, { count: result.count, data, targetedIds: ids });
 
     return result;
   }
@@ -324,6 +403,108 @@ export class AdminService {
         peakVolumeDate: dailyStats.reduce((prev: any, current: any) => (Number(prev?._sum?.amount || 0) > Number(current._sum?.amount || 0)) ? prev : current, dailyStats[0])?.date
       }
     };
+  }
+
+  /**
+   * Schedule a user for deletion (30 days grace period)
+   */
+  async scheduleUserDeletion(adminId: string, id: string) {
+    const actingAdmin = await prisma.user.findUnique({ where: { id: adminId }, select: { role: true } });
+    const targetUser = await prisma.user.findUnique({ where: { id }, select: { role: true } });
+
+    if (actingAdmin?.role !== UserRole.ADMIN) {
+      throw new Error('Forbidden: Only full Administrators can schedule account deletions.');
+    }
+
+    if (targetUser?.role === UserRole.ADMIN && id !== adminId) {
+       throw new Error('Forbidden: Administrative accounts are protected. You cannot delete another Administrator.');
+    }
+
+    if (id === adminId) {
+      throw new Error('Forbidden: You cannot schedule your own account for deletion. This protection prevents accidental system lockout.');
+    }
+
+    const deletionDate = new Date();
+    deletionDate.setDate(deletionDate.getDate() + 30);
+
+    const updatedUser = await prisma.user.update({
+      where: { id },
+      data: {
+        isActive: false,
+        deletionScheduledAt: deletionDate,
+        deletionRequestedBy: UserRole.ADMIN
+      }
+    });
+
+    await auditService.log(adminId, 'SCHEDULE_DELETION', id, { deletionDate });
+
+    return updatedUser;
+  }
+
+  /**
+   * Cancel a scheduled account deletion
+   */
+  async cancelUserDeletion(adminId: string, id: string) {
+    const actingAdmin = await prisma.user.findUnique({ where: { id: adminId }, select: { role: true } });
+    
+    if (actingAdmin?.role !== UserRole.ADMIN) {
+      throw new Error('Forbidden: Only full Administrators can cancel account deletions.');
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id },
+      data: {
+        isActive: true,
+        deletionScheduledAt: null,
+        deletionRequestedBy: null
+      }
+    });
+
+    await auditService.log(adminId, 'CANCEL_DELETION', id);
+
+    return updatedUser;
+  }
+
+  /**
+   * Run administrative maintenance cleanup (Wipe accounts & Purge logs)
+   * This is called by the unified maintenance controller/cron.
+   */
+  async runMaintenanceCleanup() {
+    const now = new Date();
+    const results = { accountsPurged: 0, logsPurged: 0 };
+
+    // 1. Permanent Account Deletion (30-day grace period passed)
+    const accountsToPurge = await prisma.user.findMany({
+      where: {
+        deletionScheduledAt: {
+          lt: now
+        }
+      },
+      select: { id: true, email: true }
+    });
+
+    if (accountsToPurge.length > 0) {
+      for (const account of accountsToPurge) {
+        // Cascade deletion is handled by Prisma (onDelete: Cascade in schema)
+        await prisma.user.delete({ where: { id: account.id } });
+      }
+      results.accountsPurged = accountsToPurge.length;
+    }
+
+    // 2. Audit Log Purge (90-day retention policy)
+    const ninetyDaysAgo = new Date();
+    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+
+    const deletedLogs = await prisma.adminLog.deleteMany({
+      where: {
+        createdAt: {
+          lt: ninetyDaysAgo
+        }
+      }
+    });
+    results.logsPurged = deletedLogs.count;
+
+    return results;
   }
 }
 

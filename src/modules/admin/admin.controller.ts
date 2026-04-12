@@ -116,6 +116,38 @@ export class AdminController {
       next(error);
     }
   }
+
+  async scheduleDeletion(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const id = req.params.id as string;
+      const adminId = req.user.id;
+      const user = await adminService.scheduleUserDeletion(adminId, id);
+      
+      res.status(200).json({
+        success: true,
+        data: user,
+        message: 'Account scheduled for deletion in 30 days.'
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async cancelDeletion(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const id = req.params.id as string;
+      const adminId = req.user.id;
+      const user = await adminService.cancelUserDeletion(adminId, id);
+      
+      res.status(200).json({
+        success: true,
+        data: user,
+        message: 'Scheduled deletion cancelled. Account restored.'
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export default new AdminController();

@@ -29,7 +29,6 @@ import budgetRoutes from './modules/budget/budget.routes.js';
 import { globalErrorHandler } from './middlewares/error.middleware.js';
 import { authenticate, authorizeVerified } from './middlewares/auth.middleware.js';
 import { authLimiter } from './middlewares/rate-limit.middleware.js';
-import { initRecurringCron } from './modules/recurring/recurring.cron.js';
 import adminRoutes from './modules/admin/admin.routes.js';
 import { maintenanceGuard } from './middlewares/maintenance.middleware.js';
 import { getSystemStatus } from './modules/status/status.controller.js';
@@ -104,7 +103,6 @@ const httpServer = createServer(app);
 
 httpServer.listen(PORT, () => {
   logger.info(`🚀 Server running on port ${PORT}`);
-  initRecurringCron();
 });
 
 export default app;

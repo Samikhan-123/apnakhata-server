@@ -51,4 +51,10 @@ router.post('/reset-password', authLimiter, authController.resetPassword);
  */
 router.get('/me', authenticate, authController.getMe);
 
+/**
+ * @route   POST /api/auth/request-deletion
+ * @desc    Request self-account deletion (30 days grace)
+ */
+router.post('/request-deletion', authenticate, authController.requestDeletion);
+
 export default router;

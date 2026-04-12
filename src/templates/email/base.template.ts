@@ -28,7 +28,7 @@ export const baseTemplate = (content: string) => `
     </div>
     <div class="footer">
       <p>&copy; 2026 Apna Khata. Built for human simplicity.</p>
-      <p>This is an automated message. Please do not reply.</p>
+      <p>This is a system notification. Please do not reply.</p>
     </div>
   </div>
 </body>

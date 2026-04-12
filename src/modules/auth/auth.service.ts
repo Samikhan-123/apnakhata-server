@@ -71,6 +71,13 @@ export class AuthService {
 
     const token = generateToken(user.id);
     
+    // Audit Login if Admin/Moderator
+    if (user.role === 'ADMIN' || (user as any).role === 'MODERATOR') {
+      import('../admin/audit.service.js').then(m => {
+        m.default.log(user.id, 'STAFF_LOGIN', undefined, { ip: data.email }); // Using email as a placeholder for context if IP/UA is unavailable
+      }).catch(err => console.error('Audit log failed', err));
+    }
+
     return { 
       user: { id: user.id, email: user.email, name: user.name, isVerified: user.isVerified, role: (user as any).role, createdAt: user.createdAt }, 
       token 
@@ -267,6 +274,14 @@ export class AuthService {
       }
 
       const token = generateToken(user.id);
+
+      // Audit Login if Admin/Moderator
+      if (user.role === 'ADMIN' || (user as any).role === 'MODERATOR') {
+        import('../admin/audit.service.js').then(m => {
+          m.default.log(user!.id, 'STAFF_LOGIN', undefined, { provider: 'google', email: user!.email });
+        }).catch(err => console.error('Audit log failed', err));
+      }
+
       return { 
         user: { id: user.id, email: user.email, name: user.name, isVerified: user.isVerified, role: user.role, createdAt: user.createdAt }, 
         token 
@@ -275,6 +290,33 @@ export class AuthService {
       if (error instanceof AppError) throw error;
       throw new AppError('Google authentication failed', 401, error);
     }
+  }
+
+  /**
+   * Request self-deletion (30 days grace period)
+   */
+  async requestSelfDeletion(userId: string) {
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new AppError('User not found', 404);
+
+    const deletionDate = new Date();
+    deletionDate.setDate(deletionDate.getDate() + 30);
+
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: {
+        isActive: false,
+        deletionScheduledAt: deletionDate,
+        deletionRequestedBy: user.role
+      }
+    });
+
+    // Audit self-deletion
+    import('../admin/audit.service.js').then(m => {
+      m.default.log(userId, 'USER_REQUESTED_DELETION', userId, { deletionDate });
+    }).catch(err => console.error('Audit log failed', err));
+
+    return updatedUser;
   }
 }
 

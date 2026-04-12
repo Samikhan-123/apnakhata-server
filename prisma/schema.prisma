@@ -29,12 +29,15 @@ model User {
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
   isActive          Boolean            @default(true)
+  deletionScheduledAt DateTime?
+  deletionRequestedBy UserRole?
   adminActions      AdminLog[]         @relation("AdminActions")
   targetedLogs      AdminLog[]         @relation("TargetedLogs")
 }
 
 enum UserRole {
   ADMIN
+  MODERATOR
   USER
 }
 
@@ -130,8 +133,8 @@ enum Frequency {
 
 model AdminLog {
   id        String   @id @default(cuid())
-  adminId   String
-  admin     User     @relation("AdminActions", fields: [adminId], references: [id])
+  adminId   String?
+  admin     User?    @relation("AdminActions", fields: [adminId], references: [id])
   action    String   
   targetId  String?  
   target    User?    @relation("TargetedLogs", fields: [targetId], references: [id])

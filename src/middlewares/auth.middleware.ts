@@ -66,3 +66,17 @@ export const authorizeVerified = async (req: AuthRequest, res: Response, next: N
 
   next();
 };
+
+export const authorizeRoles = (...roles: string[]) => {
+  return (req: AuthRequest, res: Response, next: NextFunction) => {
+    if (!req.user) {
+      return next(new AppError('Unauthorized - Please log in first', 401));
+    }
+
+    if (!roles.includes(req.user.role)) {
+      return next(new AppError('Access Denied - You do not have the required permissions for this action', 403));
+    }
+
+    next();
+  };
+};

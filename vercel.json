@@ -14,7 +14,7 @@
   ],
   "crons": [
     {
-      "path": "/api/recurring/process-due",
+      "path": "/api/admin/maintenance",
       "schedule": "0 12 * * *"
     }
   ]
