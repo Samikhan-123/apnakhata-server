@@ -15,12 +15,12 @@ export const comparePassword = async (password: string, hash: string): Promise<b
 };
 
 // generate token 
-export const generateToken = (id: string): string => {
+export const generateToken = (id: string, extraClaims: Record<string, any> = {}): string => {
   const secret = process.env.JWT_SECRET;
   if (!secret) {
     throw new Error('JWT_SECRET is not defined in environment variables');
   }
-  return jwt.sign({ id }, secret, {
+  return jwt.sign({ id, ...extraClaims }, secret, {
     expiresIn: '30d',
   });
 };

@@ -60,7 +60,9 @@ router.get('/audit-logs', adminOnlyGuard, adminController.getAuditLogs);
 router.get('/settings', adminOnlyGuard, settingsController.getSettings);
 router.patch('/settings', adminOnlyGuard, settingsController.updateSettings);
 
-// --- DELETION LIFECYCLE (ADMIN ONLY) ---
+// --- DELETION LIFECYCLE & DIAGNOSTIC (ADMIN ONLY) ---
+router.post('/impersonate/stop', adminOnlyGuard, adminController.stopImpersonate);
+router.post('/users/:id/impersonate', adminOnlyGuard, adminController.impersonate);
 router.patch('/users/:id/schedule-deletion', adminOnlyGuard, adminController.scheduleDeletion);
 router.patch('/users/:id/cancel-deletion', adminOnlyGuard, adminController.cancelDeletion);
 

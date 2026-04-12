@@ -6,6 +6,8 @@ import { AppError } from './error.middleware.js';
 
 export interface AuthRequest extends Request {
   user?: any;
+  impersonatorId?: string;
+  isReadOnly?: boolean;
 }
 
 export const authenticate = async (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -45,6 +47,17 @@ export const authenticate = async (req: AuthRequest, res: Response, next: NextFu
     }
 
     req.user = user;
+    req.impersonatorId = decoded.impersonatorId;
+    req.isReadOnly = decoded.isReadOnly;
+
+    // --- ZERO-TRUST READ-ONLY GUARD ---
+    // If impersonating, strictly block all mutation methods unless it's the 'stop' endpoint
+    if (req.isReadOnly && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
+      if (!req.path.endsWith('/impersonate/stop')) {
+        throw new AppError('Diagnostic Session: Modification actions are disabled for safety.', 403);
+      }
+    }
+
     next();
   } catch (error: any) {
     next(error);
@@ -73,7 +86,7 @@ export const authorizeRoles = (...roles: string[]) => {
       return next(new AppError('Unauthorized - Please log in first', 401));
     }
 
-    if (!roles.includes(req.user.role)) {
+    if (!roles.includes(req.user.role) && !req.impersonatorId) {
       return next(new AppError('Access Denied - You do not have the required permissions for this action', 403));
     }
 

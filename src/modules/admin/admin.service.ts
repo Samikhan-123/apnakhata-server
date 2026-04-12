@@ -1,5 +1,6 @@
 import { UserRole } from '@prisma/client';
 import prisma from '../../config/prisma.js';
+import { generateToken } from '../../utils/auth.js';
 import auditService from './audit.service.js';
 
 export class AdminService {
@@ -505,6 +506,79 @@ export class AdminService {
     results.logsPurged = deletedLogs.count;
 
     return results;
+  }
+
+  /**
+   * Enter a user or moderator dashboard in Read-Only diagnostic mode
+   */
+  async impersonateUser(adminId: string, targetUserId: string) {
+    // 1. Policy Check: Only full Administrators can impersonate
+    const actingAdmin = await prisma.user.findUnique({ where: { id: adminId }, select: { role: true } });
+    if (actingAdmin?.role !== UserRole.ADMIN) {
+      throw new Error('Forbidden: Impersonation privileges are restricted to platform Administrators.');
+    }
+
+    // 2. Target Check: Admins cannot impersonate themselves or other Admins
+    const targetUser = await prisma.user.findUnique({ where: { id: targetUserId }, select: { id: true, role: true, name: true, email: true } });
+    if (!targetUser) throw new Error('Target user not found');
+
+    if (targetUser.role === UserRole.ADMIN) {
+      throw new Error('Forbidden: Security protocols prohibit impersonating other Administrative accounts.');
+    }
+
+    // 3. Generate Impersonation Token
+    // We add 'impersonatorId' which the client will use to show the Read-Only banner
+    const token = generateToken(targetUser.id, { 
+      impersonatorId: adminId,
+      isReadOnly: true 
+    });
+
+    // 4. Audit Trail
+    await auditService.log(adminId, 'START_IMPERSONATION', targetUserId, { targetName: targetUser.name, targetEmail: targetUser.email });
+
+    return {
+      token,
+      user: {
+        id: targetUser.id,
+        name: targetUser.name,
+        email: targetUser.email,
+        role: targetUser.role
+      }
+    };
+  }
+
+  /**
+   * Stop impersonation and return to the original Administrator session
+   */
+  async stopImpersonation(impersonatorId: string) {
+    if (!impersonatorId) {
+      throw new Error('No active impersonation session found to stop.');
+    }
+
+    const admin = await prisma.user.findUnique({ 
+      where: { id: impersonatorId },
+      select: { id: true, role: true, name: true, email: true }
+    });
+
+    if (!admin || admin.role !== UserRole.ADMIN) {
+      throw new Error('Forbidden: Original session context is invalid or lacks administrative privileges.');
+    }
+
+    // Generate fresh token for the Admin
+    const token = generateToken(admin.id);
+
+    // Audit Trail
+    await auditService.log(admin.id, 'STOP_IMPERSONATION');
+
+    return {
+      token,
+      user: {
+        id: admin.id,
+        name: admin.name,
+        email: admin.email,
+        role: admin.role
+      }
+    };
   }
 }
 

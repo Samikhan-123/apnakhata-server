@@ -11,7 +11,7 @@ import { AppError } from '../../middlewares/error.middleware.js';
 
 const isProduction = process.env.NODE_ENV === 'production' || !!process.env.VERCEL;
 
-const COOKIE_OPTIONS = {
+export const COOKIE_OPTIONS = {
   httpOnly: true,
   secure: isProduction,
   sameSite: (isProduction ? 'none' : 'lax') as 'none' | 'lax',
@@ -154,6 +154,8 @@ export class AuthController {
       res.status(200).json({
         success: true,
         user: req.user,
+        impersonatorId: req.impersonatorId,
+        isReadOnly: req.isReadOnly
       });
     } catch (error) {
       next(error);

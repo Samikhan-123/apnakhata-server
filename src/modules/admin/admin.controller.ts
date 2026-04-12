@@ -2,6 +2,7 @@ import { Response, NextFunction } from 'express';
 import { AuthRequest } from '../../middlewares/auth.middleware.js';
 import adminService from './admin.service.js';
 import auditService from './audit.service.js';
+import { COOKIE_OPTIONS } from '../auth/auth.controller.js';
 
 export class AdminController {
   async getStats(req: AuthRequest, res: Response, next: NextFunction) {
@@ -143,6 +144,41 @@ export class AdminController {
         success: true,
         data: user,
         message: 'Scheduled deletion cancelled. Account restored.'
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async impersonate(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const id = req.params.id as string;
+      const adminId = req.user.id;
+      const result = await adminService.impersonateUser(adminId, id);
+      
+      res.cookie('token', result.token, COOKIE_OPTIONS);
+      res.status(200).json({
+        success: true,
+        data: result,
+        message: `Impersonation session started for ${result.user.name}`
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async stopImpersonate(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const impersonatorId = req.impersonatorId;
+      if (!impersonatorId) throw new Error('No active impersonation session found.');
+
+      const result = await adminService.stopImpersonation(impersonatorId);
+      
+      res.cookie('token', result.token, COOKIE_OPTIONS);
+      res.status(200).json({
+        success: true,
+        data: result,
+        message: 'Impersonation stopped. Staff session restored.'
       });
     } catch (error) {
       next(error);
