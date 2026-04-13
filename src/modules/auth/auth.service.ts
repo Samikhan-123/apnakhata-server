@@ -75,7 +75,7 @@ export class AuthService {
     if (user.role === 'ADMIN' || (user as any).role === 'MODERATOR') {
       import('../admin/audit.service.js').then(m => {
         m.default.log(user.id, 'STAFF_LOGIN', undefined, { ip: data.email }); // Using email as a placeholder for context if IP/UA is unavailable
-      }).catch(err => console.error('Audit log failed', err));
+      }).catch(err => { /* Audit log failed silently in production */ });
     }
 
     return { 
@@ -213,11 +213,7 @@ export class AuthService {
           });
           payload = response.data;
         } catch (axiosError: any) {
-          console.error('[Google UserInfo Error]', {
-            status: axiosError.response?.status,
-            data: axiosError.response?.data,
-            message: axiosError.message
-          });
+          throw new AppError(`Google verification failed: ${axiosError.response?.data?.error_description || axiosError.message}`, 401);
           throw new AppError(`Google verification failed: ${axiosError.response?.data?.error_description || axiosError.message}`, 401);
         }
       }
@@ -288,7 +284,7 @@ export class AuthService {
       if (user.role === 'ADMIN' || (user as any).role === 'MODERATOR') {
         import('../admin/audit.service.js').then(m => {
           m.default.log(user!.id, 'STAFF_LOGIN', undefined, { provider: 'google', email: user!.email });
-        }).catch(err => console.error('Audit log failed', err));
+        }).catch(err => { /* Audit log failed silently in production */ });
       }
 
       return { 
@@ -323,7 +319,7 @@ export class AuthService {
     // Audit self-deletion
     import('../admin/audit.service.js').then(m => {
       m.default.log(userId, 'USER_REQUESTED_DELETION', userId, { deletionDate });
-    }).catch(err => console.error('Audit log failed', err));
+    }).catch(err => { /* Audit log failed silently in production */ });
 
     return updatedUser;
   }

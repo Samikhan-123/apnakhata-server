@@ -15,10 +15,7 @@ export const authenticate = async (req: AuthRequest, res: Response, next: NextFu
     // 1. Check Cookies (Primary for Web)
     let token = req.cookies?.token;
 
-    // Log for production debugging (Safe to remove after fix)
-    if (!token && (process.env.NODE_ENV === 'production' || !!process.env.VERCEL)) {
-      console.log(`[AUTH-DEBUG] No token found in cookies. Found header: ${!!req.headers.authorization}. Cookies present: ${Object.keys(req.cookies || {}).join(', ')}`);
-    }
+    // Token validation fallback to auth header
 
     // 2. Check Authorization Header (Fallback for API/Testing)
     if (!token && req.headers.authorization?.startsWith('Bearer ')) {
