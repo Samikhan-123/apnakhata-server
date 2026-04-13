@@ -46,7 +46,7 @@ export class AuthService {
     });
 
     // Send Welcome Email with OTP
-    await mailService.sendWelcomeEmail(user.email, user.name || 'User', otp);
+    await mailService.sendWelcomeEmail(user.email, user.name || 'User', otp, data.clientTimestamp);
 
     const token = generateToken(user.id);
     return { 
@@ -117,7 +117,7 @@ export class AuthService {
   /**
    * Resend verification OTP
    */
-  async resendOTP(email: string) {
+  async resendOTP(email: string, clientTimestamp?: string) {
     const user = await authRepository.findByEmail(email);
 
     if (!user) {
@@ -136,7 +136,7 @@ export class AuthService {
       verificationExpiry: otpExpiry
     });
 
-    await mailService.sendVerificationOTP(user.email, otp);
+    await mailService.sendVerificationOTP(user.email, otp, clientTimestamp);
 
     return { message: 'New verification code sent' };
   }
@@ -144,7 +144,7 @@ export class AuthService {
   /**
    * Initiate password reset with OTP
    */
-  async forgotPassword(email: string) {
+  async forgotPassword(email: string, clientTimestamp?: string) {
     const user = await authRepository.findByEmail(email);
 
     if (!user) {
@@ -161,7 +161,7 @@ export class AuthService {
       resetExpiry
     });
 
-    await mailService.sendPasswordResetOTP(user.email, otp);
+    await mailService.sendPasswordResetOTP(user.email, user.name || 'User', otp, clientTimestamp);
 
     return { message: 'Password reset code sent to your email' };
   }
@@ -207,14 +207,23 @@ export class AuthService {
         payload = ticket.getPayload();
       } else {
         // Fetch profile using accessToken
-        const response = await axios.get(process.env.APNAKHATA_GOOGLE_LOGIN_USERINFO_URL || 'https://www.googleapis.com/oauth2/v3/userinfo', {
-          headers: { Authorization: `Bearer ${googleToken}` }
-        });
-        payload = response.data;
+        try {
+          const response = await axios.get(process.env.APNAKHATA_GOOGLE_LOGIN_USERINFO_URL || 'https://www.googleapis.com/oauth2/v3/userinfo', {
+            headers: { Authorization: `Bearer ${googleToken}` }
+          });
+          payload = response.data;
+        } catch (axiosError: any) {
+          console.error('[Google UserInfo Error]', {
+            status: axiosError.response?.status,
+            data: axiosError.response?.data,
+            message: axiosError.message
+          });
+          throw new AppError(`Google verification failed: ${axiosError.response?.data?.error_description || axiosError.message}`, 401);
+        }
       }
 
-      if (!payload || !payload.email) {
-        throw new AppError('Invalid Google token', 400);
+      if (!payload || (!payload.email && !payload.email_verified)) {
+        throw new AppError('Invalid Google token: Email not provided or verified', 400);
       }
 
       const { email, name, sub: googleId, picture: image } = payload;

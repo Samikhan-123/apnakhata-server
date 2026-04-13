@@ -30,6 +30,7 @@ import { globalErrorHandler } from './middlewares/error.middleware.js';
 import { authenticate, authorizeVerified } from './middlewares/auth.middleware.js';
 import { authLimiter } from './middlewares/rate-limit.middleware.js';
 import adminRoutes from './modules/admin/admin.routes.js';
+import supportRoutes from './modules/support/support.routes.js';
 import { maintenanceGuard } from './middlewares/maintenance.middleware.js';
 import { getSystemStatus } from './modules/status/status.controller.js';
 import logger from './utils/logger.js';
@@ -90,6 +91,7 @@ app.use('/api/ledger-entries', dashboardMiddleware, ledgerEntryRoutes);
 app.use('/api/recurring', dashboardMiddleware, recurringRoutes);
 app.use('/api/categories', dashboardMiddleware, categoryRoutes);
 app.use('/api/budgets', dashboardMiddleware, budgetRoutes);
+app.use('/api/support', supportRoutes);
 app.use('/api/admin', adminRoutes);
 
 // Sentry Error Handler (Must be before your custom error handler)

@@ -1,21 +1,21 @@
 import { baseTemplate } from './base.template.js';
 
-// src/templates/email/reset.template.ts
-// for reset password template
-export const resetPasswordTemplate = (resetLink: string) => {
+export const resetPasswordTemplate = (name: string, otp: string, customTimestamp?: string) => {
   const content = `
-    <h2 style="color: #2563eb; font-size: 24px; font-weight: 800; tracking-tight: -0.025em; margin-bottom: 24px;">Reset your password</h2>
-    <p>We received a request to reset your password. No problem! Click the button below to set a new password for your account:</p>
+    <h2 style="color: #3f4ef4; font-size: 24px; font-weight: 900; letter-spacing: -0.04em; margin-bottom: 24px;">Password Reset Request</h2>
+    <p>Hello <strong>${name}</strong>,</p>
+    <p>We received a request to reset the password for your <strong>Apna Khata</strong> account. If you initiated this, please use the otp code below:</p>
     
-    <div style="text-align: center; margin: 40px 0;">
-      <a href="${resetLink}" class="button">Reset Password</a>
-    </div>
+    <div class="otp-code" style="border-color: #fca5a1; color: #e11d48;">${otp}</div>
     
-    <p>If the button above doesn't work, copy and paste this link into your browser:</p>
-    <p style="word-break: break-all; color: #2563eb; font-size: 14px;">${resetLink}</p>
+    <p>This request was received at: <strong>${customTimestamp || 'just now'}</strong></p>
     
-    <p>This link will remain active for <strong>15 minutes</strong>. If you didn't request a password reset, you can safely ignore this email.</p>
+    <p>This security code is active for <strong>15 minutes</strong>. If you did not authorize this change, please log in immediately and update your security settings.</p>
+    
+    <hr />
+    
+    <p style="font-size: 13px; color: #94a3b8; font-weight: 600;">Security notice: Our support team will never ask you for this code over the phone or email.</p>
   `;
   
-  return baseTemplate(content);
+  return baseTemplate(content, customTimestamp);
 };

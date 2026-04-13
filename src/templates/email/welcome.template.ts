@@ -1,21 +1,36 @@
 import { baseTemplate } from './base.template.js';
 
-// src/templates/email/welcome.template.ts
-// for welcome template
-export const welcomeTemplate = (name: string, otp: string) => {
+export const welcomeTemplate = (name: string, otp: string, customTimestamp?: string) => {
   const content = `
-    <h2 style="color: #2563eb; font-size: 24px; font-weight: 800; tracking-tight: -0.025em; margin-bottom: 24px;">Welcome to the family, ${name}!</h2>
-    <p>Thank you for choosing <strong>Apna Khata</strong>. We're here to help you master your financial journey with simplicity and peace of mind.</p>
-    <p>To get started, please verify your account using the unique code below:</p>
+    <h2 style="color: #0f172a; font-size: 28px; font-weight: 900; letter-spacing: -0.05em; margin-bottom: 24px;">Welcome to Apna Khata, ${name}.</h2>
+    <p>We are pleased to have you with us. You have taken the first step towards better financial management and clarity.</p>
+    <p>To finalize your account setup, please verify your email using the secure code below:</p>
     
     <div class="otp-code">${otp}</div>
     
-    <p>This code will remain active for <strong>15 minutes</strong>. For your security, please do not share this code with anyone.</p>
+    <p>This secure code will remain active for <strong>15 minutes</strong>. For the safety of your financial data, please do not share this code.</p>
     
     <hr />
     
-    <p style="font-size: 14px; color: #6b7280;">If you didn't create an account, you can safely ignore this email.</p>
+    <p style="font-size: 13px; color: #94a3b8; font-weight: 600;">If you did not initiate this registration, please ignore this message. Your security is our priority.</p>
   `;
   
-  return baseTemplate(content);
+  return baseTemplate(content, customTimestamp);
+};
+
+export const verificationTemplate = (otp: string, customTimestamp?: string) => {
+  const content = `
+    <h2 style="color: #0f172a; font-size: 24px; font-weight: 900; letter-spacing: -0.04em; margin-bottom: 24px;">Verification Required</h2>
+    <p>A verification request was initiated for your <strong>Apna Khata</strong> account. Please use the following one-time code to proceed:</p>
+    
+    <div class="otp-code">${otp}</div>
+    
+    <p>This code is valid for <strong>15 minutes</strong>. For your protection, never share your verification codes with anyone, including Apna Khata staff.</p>
+    
+    <hr />
+    
+    <p style="font-size: 13px; color: #94a3b8; font-weight: 600;">If you did not request this code, no further action is required. Your account remains secure.</p>
+  `;
+  
+  return baseTemplate(content, customTimestamp);
 };

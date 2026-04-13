@@ -1,12 +1,13 @@
 import { sendEmail } from '../../utils/mail.util.js';
 import { welcomeTemplate } from '../../templates/email/welcome.template.js';
 import { verificationTemplate } from '../../templates/email/verification.template.js';
-import { resetPasswordTemplate } from '../../templates/email/reset.template.js';
+import { supportNotificationTemplate } from '../../templates/email/support-notification.template.js';
 import 'dotenv/config';
+import { resetPasswordTemplate } from '@/templates/email/reset.template.js';
 
 export class MailService {
-  async sendWelcomeEmail(email: string, name: string, otp: string) {
-    const html = welcomeTemplate(name, otp);
+  async sendWelcomeEmail(email: string, name: string, otp: string, clientTimestamp?: string) {
+    const html = welcomeTemplate(name, otp, clientTimestamp);
     await sendEmail({
       to: email,
       subject: 'Welcome to Apna Khata - Verify your account',
@@ -14,8 +15,8 @@ export class MailService {
     });
   }
 
-  async sendVerificationOTP(email: string, otp: string) {
-    const html = verificationTemplate(otp);
+  async sendVerificationOTP(email: string, otp: string, clientTimestamp?: string) {
+    const html = verificationTemplate(otp, clientTimestamp);
     await sendEmail({
       to: email,
       subject: 'Your Verification Code - Apna Khata',
@@ -23,11 +24,29 @@ export class MailService {
     });
   }
 
-  async sendPasswordResetOTP(email: string, otp: string) {
-    const html = verificationTemplate(otp); 
+  async sendPasswordResetOTP(email: string, name: string, otp: string, clientTimestamp?: string) {
+    const html = resetPasswordTemplate(name, otp, clientTimestamp); 
     await sendEmail({
       to: email,
-      subject: 'Reset your password code - Apna Khata',
+      subject: 'Reset your password - Apna Khata',
+      html
+    });
+  }
+
+  async sendSupportNotification(data: {
+    name: string;
+    email: string;
+    subject: string;
+    message: string;
+    userRole: string;
+    isAuthenticated: boolean;
+    ip: string;
+    clientTimestamp?: string;
+  }) {
+    const html = supportNotificationTemplate(data);
+    await sendEmail({
+      to: process.env.ADMIN_EMAIL || 'samikhan7816@gmail.com',
+      subject: `[SUPPORT REQUEST] ${data.subject} - ${data.name}`,
       html
     });
   }

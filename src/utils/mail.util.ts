@@ -12,7 +12,8 @@ export interface SendEmailOptions {
 }
 
 export const sendEmail = async (options: SendEmailOptions) => {
-  const from = process.env.MAIL_FROM || 'Apna Khata <onboarding@resend.dev>';
+
+  const from = `Apna Khata <${process.env.MAIL_FROM}>`;
 
   try {
     const { data, error } = await resend.emails.send({

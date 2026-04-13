@@ -1,20 +1,18 @@
 import { baseTemplate } from './base.template.js';
-  
-// src/templates/email/verification.template.ts
-// for verification template
-export const verificationTemplate = (otp: string) => {
+
+export const verificationTemplate = (otp: string, customTimestamp?: string) => {
   const content = `
-    <h2 style="color: #2563eb; font-size: 24px; font-weight: 800; tracking-tight: -0.025em; margin-bottom: 24px;">Your Verification Code</h2>
-    <p>Please enter the following code to confirm your request and complete your verification:</p>
+    <h2 style="color: #0f172a; font-size: 24px; font-weight: 900; letter-spacing: -0.04em; margin-bottom: 24px;">Verification Required</h2>
+    <p>A verification request was initiated for your <strong>Apna Khata</strong> account. Please use the following one-time code to proceed:</p>
     
     <div class="otp-code">${otp}</div>
     
-    <p>This code will expire in <strong>15 minutes</strong>. For your security, please do not share this code with anyone.</p>
+    <p>This code is valid for <strong>15 minutes</strong>. For your protection, never share your verification codes with anyone, including Apna Khata staff.</p>
     
     <hr />
     
-    <p style="font-size: 14px; color: #6b7280;">If you didn't request a verification code, please ignore this email.</p>
+    <p style="font-size: 13px; color: #94a3b8; font-weight: 600;">If you did not request this code, no further action is required. Your account remains secure.</p>
   `;
   
-  return baseTemplate(content);
+  return baseTemplate(content, customTimestamp);
 };

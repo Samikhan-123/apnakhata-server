@@ -11,6 +11,7 @@ export const registerSchema = z.object({
     .regex(/[0-9]/, 'Password must contain at least one number')
     .regex(/[^A-Za-z0-9]/, 'Password must contain at least one special character'),
   baseCurrency: z.string().optional().default('PKR'),
+  clientTimestamp: z.string().optional(),
 });
 
 // login schema 
@@ -28,6 +29,7 @@ export const otpSchema = z.object({
 // email schema 
 export const emailSchema = z.object({
   email: z.string().email('Invalid email address'),
+  clientTimestamp: z.string().optional(),
 });
 
 // reset password schema 
@@ -40,6 +42,7 @@ export const resetPasswordSchema = z.object({
     .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
     .regex(/[0-9]/, 'Password must contain at least one number')
     .regex(/[^A-Za-z0-9]/, 'Password must contain at least one special character'),
+  clientTimestamp: z.string().optional(),
 });
 
 // type inference 

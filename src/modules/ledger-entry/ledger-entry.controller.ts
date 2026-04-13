@@ -108,6 +108,16 @@ export class LedgerEntryController {
       const filters = ledgerEntryFiltersSchema.parse(req.query);
       const { page, limit, ...restFilters } = filters;
       const result = await ledgerEntryService.getAll(req.user.id, { ...restFilters, page: 1, limit: 10000 });
+      
+      const format = req.query.format as string;
+      
+      if (format === 'json') {
+        return res.status(200).json({
+          success: true,
+          data: result.items
+        });
+      }
+
       const csv = exportService.generateCSV(result.items as any);
 
       res.setHeader('Content-Type', 'text/csv');

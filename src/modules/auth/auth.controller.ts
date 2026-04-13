@@ -112,8 +112,8 @@ export class AuthController {
    */
   async resendOTP(req: Request, res: Response, next: NextFunction) {
     try {
-      const { email } = emailSchema.parse(req.body);
-      const result = await authService.resendOTP(email);
+      const { email, clientTimestamp } = emailSchema.parse(req.body);
+      const result = await authService.resendOTP(email, clientTimestamp);
       res.status(200).json({ success: true, ...result });
     } catch (error) {
       next(error);
@@ -125,8 +125,8 @@ export class AuthController {
    */
   async forgotPassword(req: Request, res: Response, next: NextFunction) {
     try {
-      const { email } = emailSchema.parse(req.body);
-      const result = await authService.forgotPassword(email);
+      const { email, clientTimestamp } = emailSchema.parse(req.body);
+      const result = await authService.forgotPassword(email, clientTimestamp);
       res.status(200).json({ success: true, ...result });
     } catch (error) {
       next(error);
