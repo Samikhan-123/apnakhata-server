@@ -1,9 +1,9 @@
-import prisma from './src/config/prisma.js';
+import prisma from '../src/config/prisma.ts';
 import bcrypt from 'bcrypt';
 
-const email = 'samikhan7816@gmail.com';
-const name = 'iamadmin';
-const password = 'Admin@123'; // Default temporary password
+const email = 'isamikhan.dev@gmail.com';
+const name = 'Dev@Sami';
+const password = '2323Sami*'; // Default temporary password
 
 async function main() {
   const existingUser = await prisma.user.findUnique({

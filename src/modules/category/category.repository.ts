@@ -6,7 +6,12 @@ export class CategoryRepository {
   // find all categories
   async findAll(userId: string) {
     return await prisma.category.findMany({
-      where: { userId },
+      where: {
+        OR: [
+          { userId },
+          { userId: null }
+        ]
+      },
       orderBy: { name: 'asc' },
     });
   }
@@ -20,8 +25,14 @@ export class CategoryRepository {
 
   // find category by id
   async findById(userId: string, id: string) {
-    return await prisma.category.findUnique({
-      where: { id, userId },
+    return await prisma.category.findFirst({
+      where: {
+        id,
+        OR: [
+          { userId },
+          { userId: null } // Allow access to global categories
+        ]
+      },
     });
   }
 

@@ -264,18 +264,7 @@ export class AuthService {
           }
         });
 
-        // Initialize default categories for new Google users
-        const systemCategories = await prisma.category.findMany({ where: { isSystem: true } });
-        if (systemCategories.length > 0) {
-          await prisma.category.createMany({
-            data: systemCategories.map((cat: { name: string; icon: string | null }) => ({
-              name: cat.name,
-              icon: cat.icon,
-              userId: user!.id,
-              isSystem: false
-            }))
-          });
-        }
+        // The Hybrid Category model allows access to shared global categories automatically.
       }
 
       const token = generateToken(user.id);

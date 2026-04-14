@@ -7,32 +7,7 @@ export class CategoryService {
    * List all categories for a user
    */
   async getAll(userId: string) {
-    let categories = await categoryRepository.findAll(userId);
-    
-    const standardNames = ['food', 'transport', 'utilities', 'entertainment', 'health'];
-
-    // Lazy seeding: If user has no categories, create default ones for user
-    if (categories.length === 0) {
-      const defaults = [
-        { name: 'food', icon: 'Utensils', isSystem: true },
-        { name: 'transport', icon: 'Car', isSystem: true },
-        { name: 'utilities', icon: 'Zap', isSystem: true },
-        { name: 'entertainment', icon: 'Film', isSystem: true },
-        { name: 'health', icon: 'HeartPulse', isSystem: true }
-      ];
-      
-      await Promise.all(defaults.map(d => categoryRepository.create(userId, d)));
-      categories = await categoryRepository.findAll(userId);
-    } else {
-      // Sync: Mark existing standard categories as isSystem if they aren't already
-      const needsSync = categories.filter(c => standardNames.includes(c.name.toLowerCase()) && !c.isSystem);
-      if (needsSync.length > 0) {
-        await Promise.all(needsSync.map(c => categoryRepository.update(userId, c.id, { isSystem: true } as any)));
-        categories = await categoryRepository.findAll(userId);
-      }
-    }
-    
-    return categories;
+    return await categoryRepository.findAll(userId);
   }
 
   /**

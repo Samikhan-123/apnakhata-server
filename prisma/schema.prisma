@@ -45,8 +45,8 @@ model Category {
   id                String             @id @default(cuid())
   name              String
   icon              String?
-  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId            String
+  user              User?              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId            String?
   ledgerEntries     LedgerEntry[]
   budgets           Budget[]
   recurringEntries  RecurringEntry[]
