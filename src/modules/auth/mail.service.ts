@@ -3,7 +3,7 @@ import { welcomeTemplate } from '../../templates/email/welcome.template.js';
 import { verificationTemplate } from '../../templates/email/verification.template.js';
 import { supportNotificationTemplate } from '../../templates/email/support-notification.template.js';
 import 'dotenv/config';
-import { resetPasswordTemplate } from '@/templates/email/reset.template.js';
+import { resetPasswordTemplate } from '../../templates/email/reset.template.js';
 
 export class MailService {
   async sendWelcomeEmail(email: string, name: string, otp: string, clientTimestamp?: string) {

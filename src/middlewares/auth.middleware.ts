@@ -15,7 +15,6 @@ export const authenticate = async (req: AuthRequest, res: Response, next: NextFu
     // 1. Check Cookies (Primary for Web)
     let token = req.cookies?.token;
 
-    // Token validation fallback to auth header
 
     // 2. Check Authorization Header (Fallback for API/Testing)
     if (!token && req.headers.authorization?.startsWith('Bearer ')) {

@@ -5,7 +5,7 @@ import {
   loginSchema, 
   otpSchema, 
   emailSchema, 
-  resetPasswordSchema 
+  resetPasswordSchema
 } from './auth.validation.js';
 import { AppError } from '../../middlewares/error.middleware.js';
 
