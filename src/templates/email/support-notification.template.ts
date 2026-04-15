@@ -8,6 +8,8 @@ export const supportNotificationTemplate = (data: {
   userRole: string;
   isAuthenticated: boolean;
   ip: string;
+  location?: string;
+  device?: string;
   clientTimestamp?: string;
 }) => {
   const content = `
@@ -38,7 +40,8 @@ export const supportNotificationTemplate = (data: {
     <hr style="border: none; border-top: 1px dashed #e2e8f0; margin: 40px 0;">
     
     <div style="text-align: right; color: #94a3b8; font-size: 11px; font-weight: 600;">
-       Source IP: ${data.ip} ${data.clientTimestamp ? `| Time: ${data.clientTimestamp}` : ''}
+       Source: ${data.location || 'Unknown'} | Device: ${data.device || 'Unknown'}<br />
+       IP: ${data.ip} ${data.clientTimestamp ? `| Time: ${data.clientTimestamp}` : ''}
     </div>
   `;
 

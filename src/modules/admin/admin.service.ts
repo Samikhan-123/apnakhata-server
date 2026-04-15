@@ -87,6 +87,10 @@ export class AdminService {
           isActive: true,
           googleId: true,
           password: true,
+          lastIp: true,
+          lastLocation: true,
+          lastDevice: true,
+          metadata: true,
           createdAt: true,
           _count: {
             select: {

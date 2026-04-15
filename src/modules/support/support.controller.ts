@@ -3,6 +3,7 @@ import { contactSchema } from './support.validation.js';
 import mailService from '../auth/mail.service.js';
 import { AppError } from '../../middlewares/error.middleware.js';
 import { AuthRequest } from '../../middlewares/auth.middleware.js';
+import { parseUserAgent, getLocationFromIp } from '../../utils/location.util.js';
 
 export class SupportController {
   /**
@@ -17,6 +18,12 @@ export class SupportController {
       const isAuthenticated = !!req.user;
       const userRole = req.user?.role || 'GUEST';
       
+      // Parse technical info
+      const userAgent = req.headers['user-agent'] || 'unknown';
+      const ip = req.ip || req.headers['x-forwarded-for']?.toString() || 'unknown';
+      const device = parseUserAgent(userAgent);
+      const location = await getLocationFromIp(ip);
+      
       // Send email to Admin
       await mailService.sendSupportNotification({
         name,
@@ -25,7 +32,9 @@ export class SupportController {
         message,
         userRole,
         isAuthenticated,
-        ip: req.ip || 'unknown',
+        ip: ip,
+        location: location ? `${location.city}, ${location.country}` : 'Unknown',
+        device: `${device.browser} on ${device.os} (${device.device})`,
         clientTimestamp
       });
 

@@ -24,6 +24,12 @@ model User {
   isVerified        Boolean            @default(false)
   verificationToken String?
   verificationExpiry DateTime?
+  lastTokenVersion  Int                @default(1)
+  lastIp            String?
+  lastUserAgent     String?
+  lastLocation      String?
+  lastDevice        String?
+  metadata          Json?
   resetToken        String?
   resetExpiry       DateTime?
   createdAt         DateTime           @default(now())

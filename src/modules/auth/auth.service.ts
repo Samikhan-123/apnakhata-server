@@ -9,6 +9,7 @@ import { generateToken } from '../../utils/auth.js';
 import settingsService from '../admin/settings.service.js';
 import mailService from './mail.service.js';
 import axios from 'axios';
+import { getLocationFromIp, parseUserAgent } from '../../utils/location.util.js';
 
 const googleClient = new OAuth2Client(process.env.APNAKHATA_GOOGLE_LOGIN_CLIENT_ID);
 
@@ -58,7 +59,7 @@ export class AuthService {
   /**
    * Authenticate a user
    */
-  async login(data: LoginInput) {
+  async login(data: LoginInput & { ip?: string, userAgent?: string }) {
     const user = await authRepository.findByEmail(data.email);
 
     if (!user || !(await bcrypt.compare(data.password, user.password || ''))) {
@@ -71,10 +72,15 @@ export class AuthService {
 
     const token = generateToken(user.id);
     
+    // Update Tracking Info
+    if (data.ip && data.userAgent) {
+      this.updateUserTracking(user.id, data.ip, data.userAgent).catch(e => {});
+    }
+
     // Audit Login if Admin/Moderator
     if (user.role === 'ADMIN' || (user as any).role === 'MODERATOR') {
       import('../admin/audit.service.js').then(m => {
-        m.default.log(user.id, 'STAFF_LOGIN', undefined, { ip: data.email }); // Using email as a placeholder for context if IP/UA is unavailable
+        m.default.log(user.id, 'STAFF_LOGIN', undefined, { ip: data.email }); 
       }).catch(err => { /* Audit log failed silently in production */ });
     }
 
@@ -194,7 +200,7 @@ export class AuthService {
   /**
    * Handle Google OAuth Login
    */
-  async googleLogin(googleToken: string) {
+  async googleLogin(googleToken: string, ip?: string, userAgent?: string) {
     try {
       let payload;
 
@@ -269,6 +275,11 @@ export class AuthService {
 
       const token = generateToken(user.id);
 
+      // Update Tracking Info
+      if (ip && userAgent) {
+        this.updateUserTracking(user.id, ip, userAgent).catch(e => {});
+      }
+
       // Audit Login if Admin/Moderator
       if (user.role === 'ADMIN' || (user as any).role === 'MODERATOR') {
         import('../admin/audit.service.js').then(m => {
@@ -311,6 +322,22 @@ export class AuthService {
     }).catch(err => { /* Audit log failed silently in production */ });
 
     return updatedUser;
+  }
+
+  /**
+   * Helper to update user tracking information
+   */
+  private async updateUserTracking(userId: string, ip: string, userAgent: string) {
+    const location = await getLocationFromIp(ip);
+    const device = parseUserAgent(userAgent);
+
+    await authRepository.update(userId, {
+      lastIp: ip,
+      lastUserAgent: userAgent,
+      lastLocation: location ? `${location.city}, ${location.country}` : 'Unknown',
+      lastDevice: `${device.browser} on ${device.os}`,
+      metadata: location || {}
+    });
   }
 }
 

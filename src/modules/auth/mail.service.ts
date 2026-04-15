@@ -41,6 +41,8 @@ export class MailService {
     userRole: string;
     isAuthenticated: boolean;
     ip: string;
+    location?: string;
+    device?: string;
     clientTimestamp?: string;
   }) {
     const html = supportNotificationTemplate(data);

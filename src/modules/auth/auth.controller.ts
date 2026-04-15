@@ -45,7 +45,9 @@ export class AuthController {
   async login(req: Request, res: Response, next: NextFunction) {
     try {
       const validatedData = loginSchema.parse(req.body);
-      const { user, token } = await authService.login(validatedData);
+      const ip = req.ip || req.headers['x-forwarded-for']?.toString() || 'unknown';
+      const userAgent = req.headers['user-agent'] || 'unknown';
+      const { user, token } = await authService.login({ ...validatedData, ip, userAgent });
 
       res.cookie('token', token, COOKIE_OPTIONS);
       res.status(200).json({
@@ -67,7 +69,9 @@ export class AuthController {
       if (!idToken) {
         throw new AppError('ID Token is required', 400);
       }
-      const { user, token } = await authService.googleLogin(idToken);
+      const ip = req.ip || req.headers['x-forwarded-for']?.toString() || 'unknown';
+      const userAgent = req.headers['user-agent'] || 'unknown';
+      const { user, token } = await authService.googleLogin(idToken, ip, userAgent);
 
       res.cookie('token', token, COOKIE_OPTIONS);
       res.status(200).json({
