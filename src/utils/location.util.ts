@@ -17,6 +17,8 @@ export interface DeviceInfo {
   browser?: string;
   os?: string;
   device?: string;
+  vendor?: string;
+  model?: string;
   isMobile?: boolean;
 }
 
@@ -66,6 +68,8 @@ export const parseUserAgent = (uaString?: string): DeviceInfo => {
   return {
     browser: `${browser.name} ${browser.version}`,
     os: `${os.name} ${os.version}`,
+    vendor: device.vendor,
+    model: device.model,
     device: device.model || device.type || 'Desktop',
     isMobile: device.type === 'mobile' || device.type === 'tablet'
   };
@@ -76,6 +80,7 @@ export const parseUserAgent = (uaString?: string): DeviceInfo => {
  */
 export const formatTrackingInfo = (location: LocationInfo | null, device: DeviceInfo): string => {
   const locStr = location ? `${location.city}, ${location.country}` : 'Unknown Location';
-  const devStr = `${device.browser} on ${device.os} (${device.device})`;
+  const modelStr = device.model ? ` (${device.vendor ? `${device.vendor} ` : ''}${device.model})` : '';
+  const devStr = `${device.browser} on ${device.os}${modelStr}`;
   return `${locStr} | ${devStr}`;
 };

@@ -8,14 +8,17 @@ export class AdminService {
    * Get system-wide statistics
    */
   async getSystemStats() {
-    const [totalUsers, statsByType, totalLogs] = await Promise.all([
+    const [totalUsers, statsByType, totalLogs, activeBudgets, activeRecurring, systemCategories] = await Promise.all([
       prisma.user.count(),
       (prisma.ledgerEntry as any).groupBy({
         by: ['type'],
         _sum: { amount: true },
         _count: { id: true }
       }),
-      prisma.adminLog.count()
+      prisma.adminLog.count(),
+      prisma.budget.count(),
+      prisma.recurringEntry.count({ where: { isActive: true } }),
+      prisma.category.count({ where: { isSystem: true } })
     ]);
 
     const incomeStats = statsByType.find((s: any) => s.type === 'INCOME') || { _sum: { amount: 0 }, _count: { id: 0 } };
@@ -64,7 +67,10 @@ export class AdminService {
       totalVolume: Number(incomeStats._sum.amount || 0) + Number(expenseStats._sum.amount || 0),
       newUsersLast30Days,
       userTrends,
-      totalLogs
+      totalLogs,
+      activeBudgets,
+      activeRecurring,
+      systemCategories
     };
   }
 
@@ -376,29 +382,78 @@ export class AdminService {
       userCount: stat._count.id
     }));
 
-    // 4. User Activity (Daily Active Users)
+    // 4. Platform Activity (Signups & DAU) - Last 7 Days with 0-padding
+    const activitySummaryMap: Record<string, { signups: number, activeUsers: number }> = {};
+    const sevenDaysAgoForActivity = new Date();
+    sevenDaysAgoForActivity.setDate(sevenDaysAgoForActivity.getDate() - 7);
+    
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      activitySummaryMap[d.toISOString().split('T')[0]] = { signups: 0, activeUsers: 0 };
+    }
+
+    // Signups
+    const dailySignups = await (prisma.user as any).groupBy({
+      by: ['createdAt'],
+      where: { createdAt: { gte: sevenDaysAgoForActivity } },
+      _count: { id: true }
+    });
+    dailySignups.forEach((s: any) => {
+      const d = s.createdAt.toISOString().split('T')[0];
+      if (activitySummaryMap[d]) activitySummaryMap[d].signups = s._count.id;
+    });
+
+    // DAU (Daily Active Users based on session activity/ledger entries)
     const dauStats = await (prisma.ledgerEntry as any).groupBy({
       by: ['date', 'userId'],
-      where: { date: { gte: thirtyDaysAgo } }
+      where: { date: { gte: sevenDaysAgoForActivity } }
+    });
+    const dailyUniqueUsers: Record<string, Set<string>> = {};
+    dauStats.forEach((s: any) => {
+      const d = s.date.toISOString().split('T')[0];
+      if (!dailyUniqueUsers[d]) dailyUniqueUsers[d] = new Set();
+      dailyUniqueUsers[d].add(s.userId);
+    });
+    Object.entries(dailyUniqueUsers).forEach(([date, users]) => {
+      if (activitySummaryMap[date]) activitySummaryMap[date].activeUsers = users.size;
     });
 
-    const dauMap: Record<string, Set<string>> = {};
-    dauStats.forEach((stat: any) => {
-      const d = stat.date.toISOString().split('T')[0];
-      if (!dauMap[d]) dauMap[d] = new Set();
-      dauMap[d].add(stat.userId);
+    const activityTrends = Object.entries(activitySummaryMap).map(([date, data]) => ({
+      date: new Date(date).toLocaleDateString('default', { month: 'short', day: 'numeric' }),
+      signups: data.signups,
+      activeUsers: data.activeUsers
+    }));
+
+    // 5. Top Active Users (Most transactions in last 30 days)
+    const topUsers = await (prisma.ledgerEntry as any).groupBy({
+      by: ['userId'],
+      _count: { id: true },
+      where: { date: { gte: thirtyDaysAgo } },
+      orderBy: { _count: { id: 'desc' } },
+      take: 5
     });
 
-    const activityTrends = Object.entries(dauMap).map(([date, users]) => ({
-      date,
-      count: users.size
-    })).sort((a,b) => a.date.localeCompare(b.date));
+    const topUserIds = topUsers.map((u: any) => u.userId);
+    const topUsersDetails = await prisma.user.findMany({
+       where: { id: { in: topUserIds } },
+       select: { id: true, name: true, email: true, image: true }
+    });
+
+    const topActiveUsers = topUsers.map((u: any) => {
+       const details = topUsersDetails.find(d => d.id === u.userId);
+       return {
+          ...details,
+          activityCount: u._count.id
+       };
+    });
 
     return {
       volumeTrends,
       categoryDistribution: distribution,
       currencyDistribution: currencies,
       activityTrends,
+      topActiveUsers,
       summary: {
         totalIncome: volumeTrends.reduce((acc, curr) => acc + curr.income, 0),
         totalExpense: volumeTrends.reduce((acc, curr) => acc + curr.expense, 0),

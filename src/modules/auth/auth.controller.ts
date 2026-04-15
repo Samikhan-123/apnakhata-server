@@ -26,7 +26,9 @@ export class AuthController {
   async register(req: Request, res: Response, next: NextFunction) {
     try {
       const validatedData = registerSchema.parse(req.body);
-      const { user, token } = await authService.register(validatedData);
+      const ip = req.ip || req.headers['x-forwarded-for']?.toString() || 'unknown';
+      const userAgent = req.headers['user-agent'] || 'unknown';
+      const { user, token } = await authService.register(validatedData, ip, userAgent);
 
       res.cookie('token', token, COOKIE_OPTIONS);
       res.status(201).json({

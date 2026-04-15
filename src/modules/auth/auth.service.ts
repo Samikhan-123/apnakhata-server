@@ -17,7 +17,7 @@ export class AuthService {
   /**
    * Register a new user and send verification OTP
    */
-  async register(data: RegisterInput) {
+  async register(data: RegisterInput, ip?: string, userAgent?: string) {
     // Check if registration is enabled globally
     const isRegEnabled = await settingsService.isRegistrationEnabled();
     if (!isRegEnabled && data.email !== process.env.ADMIN_EMAIL) {
@@ -48,6 +48,11 @@ export class AuthService {
 
     // Send Welcome Email with OTP
     await mailService.sendWelcomeEmail(user.email, user.name || 'User', otp, data.clientTimestamp);
+
+    // Update Tracking Info (Registration)
+    if (ip && userAgent) {
+       this.updateUserTracking(user.id, ip, userAgent).catch(e => {});
+    }
 
     const token = generateToken(user.id);
     return { 
@@ -331,11 +336,13 @@ export class AuthService {
     const location = await getLocationFromIp(ip);
     const device = parseUserAgent(userAgent);
 
+    const modelStr = device.model ? ` (${device.vendor ? `${device.vendor} ` : ''}${device.model})` : '';
+    
     await authRepository.update(userId, {
       lastIp: ip,
       lastUserAgent: userAgent,
       lastLocation: location ? `${location.city}, ${location.country}` : 'Unknown',
-      lastDevice: `${device.browser} on ${device.os}`,
+      lastDevice: `${device.browser} on ${device.os}${modelStr}`,
       metadata: location || {}
     });
   }
