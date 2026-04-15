@@ -26,11 +26,7 @@ const supportLimiter = rateLimit({
 router.post(
   '/contact',
   supportLimiter,
-  (req, res, next) => {
-    // Attempt authentication but don't strictly require it
-    // This allows us to pre-fill user data if they are logged in
-    authenticate(req as any, res, () => next());
-  },
+  authenticate,
   supportController.contact
 );
 
