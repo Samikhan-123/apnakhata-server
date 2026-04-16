@@ -298,9 +298,80 @@ export class AdminService {
       include: { category: true }
     });
 
+    // Calculate Risk Profile
+    const riskProfile = this.calculateRiskProfile(user);
+
     return {
       ...user,
-      recentActivity
+      recentActivity,
+      riskProfile
+    };
+  }
+
+  /**
+   * Calculate a security risk profile for a user based on technical metadata
+   */
+  private calculateRiskProfile(user: any) {
+    let score = 100;
+    const signals: { type: 'TRUST' | 'RISK' | 'INFO', message: string, impact: number }[] = [];
+
+    // 1. Identity Verification
+    if (!user.isVerified) {
+      const impact = -20;
+      score += impact;
+      signals.push({ type: 'RISK', message: 'Identity not verified via email', impact });
+    } else {
+      signals.push({ type: 'TRUST', message: 'Email identity verified', impact: 0 });
+    }
+
+    // 2. Authentication Method
+    if (user.googleId) {
+      const impact = 15;
+      score += impact;
+      signals.push({ type: 'TRUST', message: 'Verified Google OAuth entry point', impact });
+    }
+
+    // 3. Network Reputation (Hostname analysis)
+    const hostname = user.metadata?.hostname?.toLowerCase() || '';
+    const riskyProviders = ['ovh', 'digitalocean', 'aws', 'amazon', 'googlecloud', 'azure', 'vultr', 'linode', 'proxy', 'vpn'];
+    const isRiskyHost = riskyProviders.some(p => hostname.includes(p));
+
+    if (isRiskyHost) {
+       const impact = -30;
+       score += impact;
+       signals.push({ type: 'RISK', message: 'Data Center / VPN connection detected', impact });
+    } else if (hostname) {
+       signals.push({ type: 'INFO', message: `Residential/ISP connection: ${hostname.split('.').slice(-2).join('.')}`, impact: 0 });
+    }
+
+    // 4. Activity Volume
+    const entriesCount = user._count?.ledgerEntries || 0;
+    if (entriesCount > 500 && !user.isVerified) {
+       const impact = -20;
+       score += impact;
+       signals.push({ type: 'RISK', message: 'High activity volume from unverified account', impact });
+    }
+
+    // Normalize score between 0 and 100
+    score = Math.max(0, Math.min(100, score));
+
+    // Determine Level and Recommendation
+    let level: 'LOW' | 'MEDIUM' | 'HIGH' = 'LOW';
+    let recommendation = 'Safe: No immediate administrative action required. Standard monitoring active.';
+
+    if (score < 40) {
+      level = 'HIGH';
+      recommendation = 'Critical: High risk signals detected. Review recent activity immediately and consider a temporary ban while investigating.';
+    } else if (score < 75) {
+      level = 'MEDIUM';
+      recommendation = 'Watchlist: Suspicious metadata detected (VPN or Unverified status). Monitor for impossible travel or multi-account abuse.';
+    }
+
+    return {
+      score,
+      level,
+      recommendation,
+      signals
     };
   }
 

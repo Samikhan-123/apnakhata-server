@@ -3,8 +3,11 @@ import { z } from 'zod';
 export const ledgerEntryTypeSchema = z.enum(['INCOME', 'EXPENSE', 'TRANSFER']);
 
 const baseLedgerEntrySchema = z.object({
-  amount: z.number().positive('Amount must be positive'),
-  description: z.string().min(3, 'Description must be at least 3 characters'),
+  amount: z.number().positive('Amount must be positive').max(1000000000, 'Amount too large'),
+  description: z.string()
+    .min(3, 'Description must be at least 3 characters')
+    .max(100, 'Description must be within 100 characters')
+    .regex(/^[a-zA-Z0-9\s!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]*$/, 'Special icons and emojis are not allowed'),
   date: z.string().datetime().optional().default(new Date().toISOString()),
   type: ledgerEntryTypeSchema,
   categoryId: z.string().cuid('Invalid category ID').optional().nullable(),

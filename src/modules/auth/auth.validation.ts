@@ -2,8 +2,11 @@ import { z } from 'zod';
 
 // register schema 
 export const registerSchema = z.object({
-  name: z.string().min(2, 'Name must be at least 2 characters').max(50),
-  email: z.string().email('Invalid email address'),
+  name: z.string()
+    .min(2, 'Name must be at least 2 characters')
+    .max(15, 'Name must be within 15 characters')
+    .regex(/^[a-zA-Z0-9\s!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]*$/, 'Special icons and emojis are not allowed'),
+  email: z.string().email('Please enter a valid email address'),
   password: z.string()
     .min(8, 'Password must be at least 8 characters')
     .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
@@ -16,25 +19,25 @@ export const registerSchema = z.object({
 
 // login schema 
 export const loginSchema = z.object({
-  email: z.string().email('Invalid email address'),
+  email: z.string().email('Please enter a valid email address'),
   password: z.string().min(1, 'Password is required'),
 });
 
 // otp schema 
 export const otpSchema = z.object({
-  email: z.string().email('Invalid email address'),
+  email: z.string().email('Please enter a valid email address'),
   otp: z.string().length(6, 'OTP must be 6 digits'),
 });
 
 // email schema 
 export const emailSchema = z.object({
-  email: z.string().email('Invalid email address'),
+  email: z.string().email('Please enter a valid email address'),
   clientTimestamp: z.string().optional(),
 });
 
 // reset password schema 
 export const resetPasswordSchema = z.object({
-  email: z.string().email('Invalid email address'),
+  email: z.string().email('Please enter a valid email address'),
   otp: z.string().length(6, 'OTP must be 6 digits'),
   password: z.string()
     .min(8, 'Password must be at least 8 characters')
