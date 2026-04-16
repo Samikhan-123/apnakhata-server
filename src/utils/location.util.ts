@@ -11,6 +11,7 @@ export interface LocationInfo {
   hostname?: string;
   postal?: string;
   loc?: string;
+  isLookupSuccessful?: boolean;
 }
 
 export interface DeviceInfo {
@@ -39,6 +40,7 @@ export const getLocationFromIp = async (ip: string): Promise<LocationInfo | null
     
     // ipinfo.io returns data directly or throws on error
     return {
+      isLookupSuccessful: true,
       city: response.data.city,
       country: response.data.country,
       region: response.data.region,
@@ -50,7 +52,7 @@ export const getLocationFromIp = async (ip: string): Promise<LocationInfo | null
     };
   } catch (error) {
     logger.error('Location lookup failed (ipinfo.io)', { ip, error });
-    return null;
+    return { isLookupSuccessful: false };
   }
 };
 

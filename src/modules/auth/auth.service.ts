@@ -24,7 +24,10 @@ export class AuthService {
       throw new AppError('Public registration is currently disabled by the administrator.', 403);
     }
 
-    const existingUser = await authRepository.findByEmail(data.email);
+    const emailLower = data.email.toLowerCase();
+    const nameLower = data.name?.toLowerCase();
+
+    const existingUser = await authRepository.findByEmail(emailLower);
 
     if (existingUser) {
       throw new AppError('A user with this email already exists', 400);
@@ -36,10 +39,12 @@ export class AuthService {
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const otpExpiry = new Date(Date.now() + 15 * 60000); // 15 minutes
 
-    const role = data.email === process.env.ADMIN_EMAIL ? 'ADMIN' : 'USER';
+    const role = emailLower === process.env.ADMIN_EMAIL ? 'ADMIN' : 'USER';
 
     const user = await authRepository.create({
       ...data,
+      email: emailLower,
+      name: nameLower,
       passwordHash,
       verificationToken: otp,
       verificationExpiry: otpExpiry,
@@ -65,7 +70,8 @@ export class AuthService {
    * Authenticate a user
    */
   async login(data: LoginInput & { ip?: string, userAgent?: string }) {
-    const user = await authRepository.findByEmail(data.email);
+    const emailLower = data.email.toLowerCase();
+    const user = await authRepository.findByEmail(emailLower);
 
     if (!user || !(await bcrypt.compare(data.password, user.password || ''))) {
       throw new AppError('Invalid email or password', 401);
@@ -234,9 +240,11 @@ export class AuthService {
       }
 
       const { email, name, sub: googleId, picture: image } = payload;
+      const emailLower = email.toLowerCase();
+      const nameLower = name?.toLowerCase() || emailLower.split('@')[0];
 
       // 1. Check if user already exists
-      let user = await authRepository.findByEmail(email);
+      let user = await authRepository.findByEmail(emailLower);
 
       if (user) {
         // Rule: Existing standard users cannot login with Google if they didn't sign up with it
@@ -259,23 +267,21 @@ export class AuthService {
         // 2. Create new Google user
         // Check if registration is enabled globally
         const isRegEnabled = await settingsService.isRegistrationEnabled();
-        if (!isRegEnabled && email !== process.env.ADMIN_EMAIL) {
+        if (!isRegEnabled && emailLower !== process.env.ADMIN_EMAIL) {
           throw new AppError('Public registration is currently disabled by the administrator.', 403);
         }
 
         user = await prisma.user.create({
           data: {
-            email,
-            name: name || email.split('@')[0],
+            email: emailLower,
+            name: nameLower,
             googleId,
             image,
             isVerified: true, // Auto-verify Google users no need to send emails
-            role: email === process.env.ADMIN_EMAIL ? 'ADMIN' : 'USER',
+            role: emailLower === process.env.ADMIN_EMAIL ? 'ADMIN' : 'USER',
             baseCurrency: 'PKR', // Default
           }
         });
-
-        // The Hybrid Category model allows access to shared global categories automatically.
       }
 
       const token = generateToken(user.id);

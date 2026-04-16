@@ -23,7 +23,10 @@ export class LedgerEntryService {
     // Income limit removed to support daily/weekly earners. Focus is on total monthly liquidity.
 
     // Standard income/expense entry. Normalized to lowercase.
-    return await ledgerEntryRepository.create(userId, data);
+    return await ledgerEntryRepository.create(userId, {
+      ...data,
+      description: data.description.toLowerCase()
+    });
   }
 
   /**

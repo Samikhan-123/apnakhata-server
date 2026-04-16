@@ -331,9 +331,24 @@ export class AdminService {
       signals.push({ type: 'TRUST', message: 'Verified Google OAuth entry point', impact });
     }
 
-    // 3. Network Reputation (Hostname analysis)
-    const hostname = user.metadata?.hostname?.toLowerCase() || '';
-    const riskyProviders = ['ovh', 'digitalocean', 'aws', 'amazon', 'googlecloud', 'azure', 'vultr', 'linode', 'proxy', 'vpn'];
+    // 3. Network Reputation & Identity Visibility
+    const metadata = user.metadata || {};
+    const hostname = metadata.hostname?.toLowerCase() || '';
+    const isLookupSuccessful = metadata.isLookupSuccessful;
+    
+    // Penalize if the lookup was blocked or failed (Common with VPNs/Proxies)
+    if (isLookupSuccessful === false) {
+      const impact = -15;
+      score += impact;
+      signals.push({ type: 'RISK', message: 'Identity obfuscation or tracking block detected', impact });
+    }
+
+    // Expand risky providers list
+    const riskyProviders = [
+      'ovh', 'digitalocean', 'aws', 'amazon', 'googlecloud', 'azure', 'vultr', 'linode', 
+      'proxy', 'vpn', 'tor-exit', 'mullvad', 'nordvpn', 'surfshark', 'expressvpn', 
+      'host', 'data-center', 'cloud', 'hosting'
+    ];
     const isRiskyHost = riskyProviders.some(p => hostname.includes(p));
 
     if (isRiskyHost) {
@@ -342,6 +357,11 @@ export class AdminService {
        signals.push({ type: 'RISK', message: 'Data Center / VPN connection detected', impact });
     } else if (hostname) {
        signals.push({ type: 'INFO', message: `Residential/ISP connection: ${hostname.split('.').slice(-2).join('.')}`, impact: 0 });
+    } else if (isLookupSuccessful !== false) {
+       // Lookup succeeded but hostname is still missing - slightly suspicious
+       const impact = -5;
+       score += impact;
+       signals.push({ type: 'INFO', message: 'Limited network metadata available', impact });
     }
 
     // 4. Activity Volume

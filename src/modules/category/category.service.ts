@@ -29,7 +29,10 @@ export class CategoryService {
     if (count >= 20) {
       throw new AppError('Category limit reached. Max 20 categories allowed.', 400);
     }
-    return await categoryRepository.create(userId, data);
+    return await categoryRepository.create(userId, {
+      ...data,
+      name: data.name.toLowerCase()
+    });
   }
 
   /**
@@ -43,7 +46,10 @@ export class CategoryService {
     if (category.isSystem) {
       throw new AppError('System categories are permanent and cannot be modified.', 400);
     }
-    return await categoryRepository.update(userId, id, data);
+    return await categoryRepository.update(userId, id, {
+      ...data,
+      name: data.name?.toLowerCase()
+    });
   }
 
   async delete(userId: string, id: string) {
