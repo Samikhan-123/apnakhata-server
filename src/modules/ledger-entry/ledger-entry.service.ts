@@ -158,26 +158,35 @@ export class LedgerEntryService {
     const { startDate, endDate } = filters;
     const now = new Date();
     
-    // Default window for trends if no dates provided
-    const trendStartDate = startDate ? new Date(startDate) : new Date(new Date().setMonth(now.getMonth() - 5));
-    if (!startDate) trendStartDate.setDate(1);
-    trendStartDate.setHours(0, 0, 0, 0);
-    
-    const trendEndDate = endDate ? new Date(endDate) : now;
-    if (endDate) trendEndDate.setHours(23, 59, 59, 999);
-
-    // 1. COMPREHENSIVE SUMMARY (All-time or Filtered)
+    // 1. OVERVIEW DATES (Strictly based on User Filters)
     const overview = await ledgerEntryRepository.getFinancialSummary(userId, filters);
 
-    // 2. FETCH DATA FOR TRENDS
-    const entries = await prisma.ledgerEntry.findMany({
+    // 2. TREND DATES (Fixed window for stability: Last 6 Months from Today)
+    const trendStartDate = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+    trendStartDate.setHours(0, 0, 0, 0);
+    const trendEndDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+
+    // Fetch data for Category Breakdown (based on current window/filters)
+    const categoryEntries = await prisma.ledgerEntry.findMany({
       where: {
         userId,
-        date: { gte: trendStartDate, lte: trendEndDate },
+        date: { 
+          gte: startDate ? new Date(startDate) : new Date(now.getFullYear(), now.getMonth(), 1),
+          lte: endDate ? new Date(endDate) : now
+        },
         ...(filters.categoryId && { categoryId: filters.categoryId }),
         ...(filters.search && {
           description: { contains: filters.search, mode: 'insensitive' }
         })
+      },
+      include: { category: true }
+    });
+
+    // Fetch data for Trends (Fixed 6-month window)
+    const trendEntries = await prisma.ledgerEntry.findMany({
+      where: {
+        userId,
+        date: { gte: trendStartDate, lte: trendEndDate }
       },
       include: { category: true }
     });
@@ -189,9 +198,8 @@ export class LedgerEntryService {
       take: 5
     });
 
-    // Category Breakdown (based on current window/filters)
     const categoryMap = new Map<string, number>();
-    entries.filter((e: any) => e.type === 'EXPENSE').forEach((entry: any) => {
+    categoryEntries.filter((e: any) => e.type === 'EXPENSE').forEach((entry: any) => {
       const catName = entry.category?.name || 'uncategorized';
       const catAmount = Number(entry.amount);
       categoryMap.set(catName, (categoryMap.get(catName) || 0) + catAmount);
@@ -199,14 +207,14 @@ export class LedgerEntryService {
 
     const categoryBreakdown = Array.from(categoryMap.entries()).map(([name, value]) => ({ name, value }));
 
-    // Monthly Trends
+    // Monthly Trends Calculation
     const monthlyTrendsMap = new Map();
-    // Generate months between trendStartDate and trendEndDate
     let iterDate = new Date(trendStartDate);
     while (iterDate <= trendEndDate) {
       const key = `${iterDate.getFullYear()}-${String(iterDate.getMonth() + 1).padStart(2, '0')}`;
+      const yearShort = String(iterDate.getFullYear()).slice(-2);
       monthlyTrendsMap.set(key, { 
-        month: iterDate.toLocaleString('default', { month: 'short' }), 
+        month: `${iterDate.toLocaleString('default', { month: 'short' })} '${yearShort}`, 
         income: 0, 
         expense: 0,
         balance: 0
@@ -214,7 +222,7 @@ export class LedgerEntryService {
       iterDate.setMonth(iterDate.getMonth() + 1);
     }
 
-    // Cumulative balance calculation
+    // Cumulative balance for Trends
     const beforeStats = await prisma.ledgerEntry.groupBy({
       by: ['type'],
       where: {
@@ -227,12 +235,12 @@ export class LedgerEntryService {
     let currentBalance = Number(beforeStats.find((s: any) => s.type === 'INCOME')?._sum.amount || 0) - 
                          Number(beforeStats.find((s: any) => s.type === 'EXPENSE')?._sum.amount || 0);
 
-    const sortedEntries = [...entries].sort((a, b) => a.date.getTime() - b.date.getTime());
+    const sortedTrendEntries = [...trendEntries].sort((a, b) => a.date.getTime() - b.date.getTime());
     const keys = Array.from(monthlyTrendsMap.keys());
     
     keys.forEach(key => {
       const stats = monthlyTrendsMap.get(key);
-      const monthEntries = sortedEntries.filter(e => {
+      const monthEntries = sortedTrendEntries.filter(e => {
         const eKey = `${e.date.getFullYear()}-${String(e.date.getMonth() + 1).padStart(2, '0')}`;
         return eKey === key;
       });
