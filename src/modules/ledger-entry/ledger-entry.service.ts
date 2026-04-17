@@ -20,7 +20,8 @@ export class LedgerEntryService {
       }
     }
 
-    // Income limit removed to support daily/weekly earners. Focus is on total monthly liquidity.
+    // Enforce 3-Month Window for creation
+    this.validateDateWindow(new Date(data.date || new Date()));
 
     // Standard income/expense entry. Normalized to lowercase.
     return await ledgerEntryRepository.create(userId, {
@@ -48,31 +49,30 @@ export class LedgerEntryService {
   }
 
   /**
-   * Helper to check if a Record date is locked for editing/deletion
+   * Enforces the "3-Month Hybrid Rule" (Previous, Current, and Next month window)
+   * This ensures data outside this strictly audited window is hardened.
    */
-  private isDateLocked(date: Date): boolean {
+  private validateDateWindow(date: Date) {
     const now = new Date();
-    const today = now.getDate();
+    
+    // 1. Current Month Boundary
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
-    
+
+    // 2. Window Calculation
     const targetMonth = date.getMonth();
     const targetYear = date.getFullYear();
 
-    // 1. Current Month Record are never locked
-    if (targetMonth === currentMonth && targetYear === currentYear) return false;
+    // Calculate absolute month indices for comparison (Year * 12 + Month)
+    const nowIdx = (currentYear * 12) + currentMonth;
+    const targetIdx = (targetYear * 12) + targetMonth;
 
-    // 2. Previous Month Audit Protection with 2-Day Grace Period
-    const isPrevMonth = (targetYear === currentYear && targetMonth === currentMonth - 1) ||
-                        (targetYear === currentYear - 1 && targetMonth === 11 && currentMonth === 0);
+    // Allowed window: [Now-1, Now, Now+1]
+    const diff = targetIdx - nowIdx;
 
-    if (isPrevMonth) {
-      // Allowed only on 1st and 2nd of current month
-      return today > 2;
+    if (diff < -1 || diff > 1) {
+      throw new AppError('Date is outside the allowed auditing window (Previous, Current, or Next month only).', 400);
     }
-
-    // 3. Older than previous month is always locked
-    return true;
   }
 
   /**
@@ -84,10 +84,8 @@ export class LedgerEntryService {
       throw new AppError('Ledger entry not found', 404);
     }
     
-    // Check historical lock
-    if (this.isDateLocked(new Date(entry.date))) {
-      throw new AppError('Historical records from previous months are locked for audit integrity.', 400);
-    }
+    // Enforce 3-Month Window for deletion
+    this.validateDateWindow(new Date(entry.date));
 
     await ledgerEntryRepository.delete(id, userId);
     auditLog('LEDGER_ENTRY_DELETE', userId, { entryId: id, amount: entry.amount, type: entry.type });
@@ -103,14 +101,12 @@ export class LedgerEntryService {
       throw new AppError('Ledger entry not found', 404);
     }
 
-    // Check historical lock (Original Date)
-    if (this.isDateLocked(new Date(existingEntry.date))) {
-      throw new AppError('Historical records from previous months are locked for audit integrity.', 400);
-    }
+    // Enforce 3-Month Window for update (Existing Date)
+    this.validateDateWindow(new Date(existingEntry.date));
 
-    // Check historical lock (New Date if being changed)
-    if (data.date && this.isDateLocked(new Date(data.date))) {
-      throw new AppError('Cannot move Records into locked historical months.', 400);
+    // Enforce 3-Month Window for update (New Date if being changed)
+    if (data.date) {
+      this.validateDateWindow(new Date(data.date));
     }
 
     // Income First Rule for Updates

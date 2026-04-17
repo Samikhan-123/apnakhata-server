@@ -20,7 +20,7 @@ export class AdminController {
   async getUsers(req: AuthRequest, res: Response, next: NextFunction) {
     try {
       const page = parseInt(req.query.page as string) || 1;
-      const limit = parseInt(req.query.limit as string) || 10;
+      const limit = parseInt(req.query.limit as string) || 20;
       
       const result = await adminService.getAllUsers(page, limit);
       res.status(200).json({

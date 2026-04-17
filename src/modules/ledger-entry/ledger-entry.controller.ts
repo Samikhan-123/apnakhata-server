@@ -39,6 +39,7 @@ export class LedgerEntryController {
         data: result.items,
         pagination: {
           total: result.total,
+          totalPages: result.totalPages,
           page: result.page,
           limit: result.limit
         }

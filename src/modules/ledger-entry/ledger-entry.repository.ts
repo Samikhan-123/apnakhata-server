@@ -56,7 +56,9 @@ export class LedgerEntryRepository {
       prisma.ledgerEntry.count({ where })
     ]);
 
-    return { items, total, page, limit };
+    const totalPages = Math.ceil(total / limit);
+
+    return { items, total, totalPages, page, limit };
   }
 
   async findById(id: string, userId: string) {

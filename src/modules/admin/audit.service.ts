@@ -71,7 +71,7 @@ export class AuditService {
     }
 
     try {
-      const [logs, totalCount] = await Promise.all([
+      const [logs, total] = await Promise.all([
         (prisma as any).adminLog.findMany({
           where,
           skip,
@@ -92,9 +92,9 @@ export class AuditService {
       return {
         logs,
         pagination: {
-          totalCount,
-          totalPages: Math.ceil(totalCount / safeLimit),
-          currentPage: safePage,
+          total,
+          totalPages: Math.ceil(total / safeLimit),
+          page: safePage,
           limit: safeLimit
         }
       };

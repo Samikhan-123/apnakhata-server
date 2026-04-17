@@ -77,10 +77,10 @@ export class AdminService {
   /**
    * Get all users with basic info and pagination
    */
-  async getAllUsers(page: number = 1, limit: number = 10) {
+  async getAllUsers(page: number = 1, limit: number = 20) {
     const skip = (page - 1) * limit;
 
-    const [users, totalCount] = await Promise.all([
+    const [users, total] = await Promise.all([
       prisma.user.findMany({
         skip,
         take: limit,
@@ -116,9 +116,9 @@ export class AdminService {
     return {
       users,
       pagination: {
-        totalCount,
-        totalPages: Math.ceil(totalCount / limit),
-        currentPage: page,
+        total,
+        totalPages: Math.ceil(total / limit),
+        page,
         limit
       }
     };

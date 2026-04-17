@@ -7,6 +7,10 @@ export class RecurringController {
     try {
       const validatedData = CreateRecurringSchema.parse(req.body);
       const entry = await recurringService.createEntry(req.user.id, validatedData);
+      
+      // Instant Sync: Attempt to process due tasks immediately (especially helpful for 'Today' starts)
+      await recurringService.triggerUserSync(req.user.id);
+      
       res.status(201).json({
         success: true,
         data: entry,

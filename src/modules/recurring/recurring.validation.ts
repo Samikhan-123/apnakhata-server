@@ -10,6 +10,7 @@ export const CreateRecurringSchema = z.object({
     .regex(/^[a-zA-Z0-9\s!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]*$/, 'Special icons and emojis are not allowed'),
   type: z.nativeEnum(LedgerEntryType).refine((type) => type !== 'TRANSFER', { message: 'TRANSFER is not allowed' }),
   frequency: z.nativeEnum(Frequency).refine((frequency) => frequency !== 'TEN_SECONDS', { message: 'TEN_SECONDS is not allowed' }),
+  nextExecution: z.string().min(1, 'First payment date is required'),
 });
 
 export type CreateRecurringInput = z.infer<typeof CreateRecurringSchema>;

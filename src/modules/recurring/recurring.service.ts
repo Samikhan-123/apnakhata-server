@@ -5,7 +5,13 @@ import prisma from '../../config/prisma.js';
 
 export class RecurringService {
   async createEntry(userId: string, data: any) {
-    const nextExecution = data.nextExecution ? new Date(data.nextExecution) : this.calculateNextExecution(new Date(), data.frequency);
+    // If user provided a date, use it. If not, default to NOW.
+    const baseDate = data.nextExecution ? new Date(data.nextExecution) : new Date();
+    
+    // Always normalize to 12 PM Noon to align with Sync Job logic
+    const nextExecution = new Date(baseDate);
+    nextExecution.setHours(12, 0, 0, 0);
+
     return await recurringRepository.create({
       ...data,
       description: data.description.toLowerCase(),
@@ -109,11 +115,9 @@ export class RecurringService {
     const allEntries = await recurringRepository.findAll(userId);
     const now = new Date();
     
-    // Force sync works if:
-    // 1. It's actually due (nextExecution <= now)
-    // 2. OR it's a NEW task (hits === 0) - allows immediate first execution
+    // Force sync only if the task is actually due (nextExecution <= now)
     const userDueEntries = allEntries.filter(e => e.userId === userId && (
-      e.nextExecution <= now || (e.hits === 0)
+      e.nextExecution <= now
     ));
     
     const results = [];
