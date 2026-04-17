@@ -21,7 +21,7 @@ export const baseTemplate = (content: string, customTimestamp?: string) => {
     .content { padding: 48px 40px; color: #1f2937; line-height: 1.8; }
     .footer { padding: 40px; text-align: center; background-color: #f8fafc; color: #94a3b8; font-size: 11px; border-top: 1px solid #f1f5f9; }
     .button { display: inline-block; padding: 16px 36px; background-color: #2563eb; color: #ffffff !important; font-weight: 800; text-decoration: none; border-radius: 16px; margin: 32px 0; text-transform: uppercase; letter-spacing: 0.1em; font-size: 12px; }
-    .otp-code { background-color: #f1f5f9; padding: 32px; border-radius: 24px; font-size: 40px; font-weight: 900; text-align: center; letter-spacing: 0.3em; color: #0f172a; margin: 40px 0; border: 2px solid #e2e8f0; font-family: 'Courier New', monospace; }
+    .otp-code { background-color: #f1f5f9; padding: 20px; border-radius: 24px; font-size: 30px; font-weight: 900; text-align: center; letter-spacing: 0.3em; color: #0f172a; margin: 40px 0; border: 2px solid #e2e8f0; font-family: 'Courier New', monospace; }
     p { margin-bottom: 20px; font-size: 16px; font-weight: 500; }
     .timestamp { margin-top: 20px; font-style: italic; color: #cbd5e1; font-weight: 600; font-size: 10px; }
     hr { border: none; border-top: 1px solid #f1f5f9; margin: 40px 0; }

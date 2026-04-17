@@ -9,7 +9,7 @@ import { generateToken } from '../../utils/auth.js';
 import settingsService from '../admin/settings.service.js';
 import mailService from './mail.service.js';
 import axios from 'axios';
-import { getLocationFromIp, parseUserAgent } from '../../utils/location.util.js';
+import { getLocationFromIp, parseUserAgent, formatTrackingInfo } from '../../utils/location.util.js';
 
 const googleClient = new OAuth2Client(process.env.APNAKHATA_GOOGLE_LOGIN_CLIENT_ID);
 
@@ -342,13 +342,15 @@ export class AuthService {
     const location = await getLocationFromIp(ip);
     const device = parseUserAgent(userAgent);
 
-    const modelStr = device.model ? ` (${device.vendor ? `${device.vendor} ` : ''}${device.model})` : '';
+    const hardwareInfo = device.model 
+      ? ` (${device.vendor ? `${device.vendor} ` : ''}${device.model})` 
+      : (device.isMobile ? ' (Mobile Device)' : ' (Desktop)');
     
     await authRepository.update(userId, {
       lastIp: ip,
       lastUserAgent: userAgent,
-      lastLocation: location ? `${location.city}, ${location.country}` : 'Unknown',
-      lastDevice: `${device.browser} on ${device.os}${modelStr}`,
+      lastLocation: location?.isLookupSuccessful ? `${location.city}, ${location.country}` : 'Unknown Location',
+      lastDevice: `${device.browser} on ${device.os}${hardwareInfo}`,
       metadata: location || {}
     });
   }
