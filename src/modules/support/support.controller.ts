@@ -3,7 +3,7 @@ import { contactSchema } from './support.validation.js';
 import mailService from '../auth/mail.service.js';
 import { AppError } from '../../middlewares/error.middleware.js';
 import { AuthRequest } from '../../middlewares/auth.middleware.js';
-import { parseUserAgent, getLocationFromIp } from '../../utils/location.util.js';
+import { parseUserAgent, getLocationFromIp, getClientIp } from '../../utils/location.util.js';
 
 export class SupportController {
   /**
@@ -20,7 +20,7 @@ export class SupportController {
       
       // Parse technical info
       const userAgent = req.headers['user-agent'] || 'unknown';
-      const ip = req.ip || req.headers['x-forwarded-for']?.toString() || 'unknown';
+      const ip = getClientIp(req);
       const device = parseUserAgent(userAgent);
       const location = await getLocationFromIp(ip);
       

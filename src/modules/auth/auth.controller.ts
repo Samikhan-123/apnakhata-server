@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import authService from './auth.service.js';
+import { getClientIp } from '../../utils/location.util.js';
 import { 
   registerSchema, 
   loginSchema, 
@@ -26,7 +27,7 @@ export class AuthController {
   async register(req: Request, res: Response, next: NextFunction) {
     try {
       const validatedData = registerSchema.parse(req.body);
-      const ip = req.ip || req.headers['x-forwarded-for']?.toString() || 'unknown';
+      const ip = getClientIp(req);
       const userAgent = req.headers['user-agent'] || 'unknown';
       const { user, token } = await authService.register(validatedData, ip, userAgent);
 
@@ -47,7 +48,7 @@ export class AuthController {
   async login(req: Request, res: Response, next: NextFunction) {
     try {
       const validatedData = loginSchema.parse(req.body);
-      const ip = req.ip || req.headers['x-forwarded-for']?.toString() || 'unknown';
+      const ip = getClientIp(req);
       const userAgent = req.headers['user-agent'] || 'unknown';
       const { user, token } = await authService.login({ ...validatedData, ip, userAgent });
 
@@ -71,7 +72,7 @@ export class AuthController {
       if (!idToken) {
         throw new AppError('ID Token is required', 400);
       }
-      const ip = req.ip || req.headers['x-forwarded-for']?.toString() || 'unknown';
+      const ip = getClientIp(req);
       const userAgent = req.headers['user-agent'] || 'unknown';
       const { user, token } = await authService.googleLogin(idToken, ip, userAgent);
 
