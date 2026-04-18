@@ -40,7 +40,7 @@ const app = express();
 // Trust proxy (Required for Vercel/Render/proxies)
 app.set('trust proxy', true);
 
-const dashboardMiddleware = [authenticate, authorizeVerified];
+const dashboardMiddleware = [authenticate, authorizeVerified, maintenanceGuard];
 
 // --- PRODUCTION-READY FAIL-SAFE CORS ---
 app.use((req, res, next) => {
@@ -75,9 +75,6 @@ app.use(helmet({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
-
-// Maintenance Guard (Global Platform Block)
-app.use(maintenanceGuard);
 
 // Health Check
 app.get('/health', (req: Request, res: Response) => {

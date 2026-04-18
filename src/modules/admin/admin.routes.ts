@@ -3,6 +3,7 @@ import adminController from './admin.controller.js';
 import settingsController from './settings.controller.js';
 import maintenanceController from './maintenance.controller.js';
 import { authenticate, authorizeRoles } from '../../middlewares/auth.middleware.js';
+import { maintenanceGuard } from '@/middlewares/maintenance.middleware.js';
 
 const router = Router();
 
@@ -12,6 +13,7 @@ router.post('/maintenance', maintenanceController.runMaintenance);
 
 // Base Authentication for all other admin routes
 router.use(authenticate);
+router.use(maintenanceGuard);
 
 // Permission Matrix: ADMIN & MODERATOR (General Management)
 const adminModGuard = authorizeRoles('ADMIN', 'MODERATOR');

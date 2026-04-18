@@ -4,14 +4,20 @@ import auditService from './audit.service.js';
 export class SettingsService {
   private singletonId = 'singleton';
   private cache: any = null;
+  private lastRefreshed = 0;
+  private readonly CACHE_TTL = 60000; // 60 seconds
 
   /**
-   * Get current system settings, using perpetual in-memory cache
+   * Get current system settings, using a resilient in-memory cache with TTL
    */
   async getSettings() {
-    // If cache is empty (usually only on first boot), load from DB
-    if (!this.cache) {
+    const now = Date.now();
+    const isStale = now - this.lastRefreshed > this.CACHE_TTL;
+
+    // If cache is empty or stale, load from DB
+    if (!this.cache || isStale) {
       this.cache = await this.refreshCache();
+      this.lastRefreshed = now;
     }
     return this.cache;
   }
@@ -42,9 +48,9 @@ export class SettingsService {
   /**
    * Update global system settings and sync memory cache
    */
-  async updateSettings(adminId: string, data: { 
-    maintenanceMode?: boolean, 
-    registrationEnabled?: boolean, 
+  async updateSettings(adminId: string, data: {
+    maintenanceMode?: boolean,
+    registrationEnabled?: boolean,
     maxEntriesLimit?: number
   }) {
     const settings = await prisma.systemSettings.update({

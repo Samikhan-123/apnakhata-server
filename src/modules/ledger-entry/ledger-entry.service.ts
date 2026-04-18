@@ -3,13 +3,22 @@ import { CreateLedgerEntryInput, UpdateLedgerEntryInput, LedgerEntryFilters } fr
 import { AppError } from '../../middlewares/error.middleware.js';
 import ledgerEntryRepository from './ledger-entry.repository.js';
 import { auditLog } from '../../utils/logger.js';
+import settingsService from '../admin/settings.service.js';
 
 export class LedgerEntryService {
   /**
    * Create a new ledger entry
    */
   async create(userId: string, data: CreateLedgerEntryInput) {
-    // Income First Rule: Cannot add expense if balance is insufficient
+    // 1. Data Retention / Global Limit Check
+    const settings = await settingsService.getSettings();
+    const currentCount = await prisma.ledgerEntry.count({ where: { userId } });
+    
+    if (currentCount >= settings.maxEntriesLimit) {
+      throw new AppError(`Storage limit reached (${settings.maxEntriesLimit} records). Please delete old entries to continue.`, 400);
+    }
+
+    // 2. Income First Rule: Cannot add expense if balance is insufficient
     if (data.type === 'EXPENSE') {
       const summary = await ledgerEntryRepository.getFinancialSummary(userId);
       if (summary.totalIncome <= 0) {
@@ -147,7 +156,17 @@ export class LedgerEntryService {
    * Financial Summary (Filtered or All-time)
    */
   async getOverview(userId: string, filters?: { startDate?: string; endDate?: string }) {
-    return await ledgerEntryRepository.getFinancialSummary(userId, filters);
+    const [summary, settings, totalRecords] = await Promise.all([
+      ledgerEntryRepository.getFinancialSummary(userId, filters),
+      settingsService.getSettings(),
+      prisma.ledgerEntry.count({ where: { userId } })
+    ]);
+
+    return {
+      ...summary,
+      totalRecords,
+      maxEntriesLimit: settings.maxEntriesLimit
+    };
   }
 
   async getDashboardStats(userId: string, filters: any = {}) {
@@ -254,10 +273,15 @@ export class LedgerEntryService {
       stats.balance = currentBalance;
     });
 
+    const settings = await settingsService.getSettings();
+    const totalRecords = await prisma.ledgerEntry.count({ where: { userId } });
+
     return {
       overview: {
         ...overview,
-        balance: overview.remainingBalance
+        balance: overview.remainingBalance,
+        totalRecords,
+        maxEntriesLimit: settings.maxEntriesLimit
       },
       recentEntries: recentEntries.map((e: any) => ({
           ...e,
