@@ -75,13 +75,25 @@ export class AdminService {
   }
 
   /**
-   * Get all users with basic info and pagination
+   * Get all users with basic info, pagination, and advanced filtering
    */
-  async getAllUsers(page: number = 1, limit: number = 20) {
+  async getAllUsers(page: number = 1, limit: number = 20, filters: { role?: UserRole, isActive?: boolean, isVerified?: boolean, search?: string } = {}) {
     const skip = (page - 1) * limit;
+
+    const where: any = {};
+    if (filters.role) where.role = filters.role;
+    if (filters.isActive !== undefined) where.isActive = filters.isActive;
+    if (filters.isVerified !== undefined) where.isVerified = filters.isVerified;
+    if (filters.search) {
+      where.OR = [
+        { email: { contains: filters.search, mode: 'insensitive' } },
+        { name: { contains: filters.search, mode: 'insensitive' } }
+      ];
+    }
 
     const [users, total] = await Promise.all([
       prisma.user.findMany({
+        where,
         skip,
         take: limit,
         select: {
@@ -91,8 +103,8 @@ export class AdminService {
           role: true,
           isVerified: true,
           isActive: true,
+          lastActive: true,
           googleId: true,
-          password: true,
           lastIp: true,
           lastLocation: true,
           lastDevice: true,
@@ -110,7 +122,7 @@ export class AdminService {
           createdAt: 'desc'
         }
       }),
-      prisma.user.count()
+      prisma.user.count({ where })
     ]);
 
     return {
@@ -290,20 +302,11 @@ export class AdminService {
       throw new Error('User not found');
     }
 
-    // Get last 5 Records
-    const recentActivity = await prisma.ledgerEntry.findMany({
-      where: { userId: id },
-      take: 5,
-      orderBy: { date: 'desc' },
-      include: { category: true }
-    });
-
     // Calculate Risk Profile
     const riskProfile = this.calculateRiskProfile(user);
 
     return {
       ...user,
-      recentActivity,
       riskProfile
     };
   }

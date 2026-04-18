@@ -21,8 +21,14 @@ export class AdminController {
     try {
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 20;
+      const { role, isActive, isVerified, search } = req.query;
+
+      const filters: any = { search: search as string };
+      if (role) filters.role = role;
+      if (isActive !== undefined) filters.isActive = isActive === 'true';
+      if (isVerified !== undefined) filters.isVerified = isVerified === 'true';
       
-      const result = await adminService.getAllUsers(page, limit);
+      const result = await adminService.getAllUsers(page, limit, filters);
       res.status(200).json({
         success: true,
         data: result.users,

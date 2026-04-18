@@ -46,6 +46,16 @@ export const authenticate = async (req: AuthRequest, res: Response, next: NextFu
     req.impersonatorId = decoded.impersonatorId;
     req.isReadOnly = decoded.isReadOnly;
 
+    // --- REAL-TIME PRESENCE TRACKING ---
+    // Update lastActive timestamp on every request to track Online/Offline status
+    // We do this asynchronously to avoid blocking the main request flow
+    prisma.user.update({
+      where: { id: user.id },
+      data: { lastActive: new Date() }
+    }).catch(err => {
+      // console.error('Failed to update lastActive', err);
+    });
+
     // --- ZERO-TRUST READ-ONLY GUARD ---
     // If impersonating, strictly block all mutation methods unless it's the 'stop' endpoint
     if (req.isReadOnly && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
