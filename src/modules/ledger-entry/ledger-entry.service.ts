@@ -157,8 +157,8 @@ export class LedgerEntryService {
     // 1. OVERVIEW DATES (Strictly based on User Filters)
     const overview = await ledgerEntryRepository.getFinancialSummary(userId, filters);
 
-    // 2. TREND DATES (Fixed window for stability: Last 6 Months from Today)
-    const trendStartDate = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+    // 2. TREND DATES (Expanded to 12 Months to support 1Y frontend toggle)
+    const trendStartDate = new Date(now.getFullYear(), now.getMonth() - 11, 1);
     trendStartDate.setHours(0, 0, 0, 0);
     const trendEndDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
 

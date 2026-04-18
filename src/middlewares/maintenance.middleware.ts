@@ -20,7 +20,7 @@ export const maintenanceGuard = async (req: Request, res: Response, next: NextFu
     }
 
     // Bypass for login/auth, status heartbeat, and administrative API
-    if (req.path.startsWith('/api/auth') || req.path === '/api/status' || req.path.startsWith('/api/admin')) {
+    if (req.path.startsWith('/api/auth') || req.path === '/api/system/status' || req.path.startsWith('/api/admin')) {
       return next();
     }
 

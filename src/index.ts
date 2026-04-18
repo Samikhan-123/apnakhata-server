@@ -85,7 +85,7 @@ app.get('/health', (req: Request, res: Response) => {
 });
 
 // Routes
-app.get('/api/status', getSystemStatus);
+app.get('/api/system/status', getSystemStatus);
 app.use('/api/auth', authRoutes);
 app.use('/api/ledger-entries', dashboardMiddleware, ledgerEntryRoutes);
 app.use('/api/recurring', dashboardMiddleware, recurringRoutes);

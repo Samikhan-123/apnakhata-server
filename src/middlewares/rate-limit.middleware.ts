@@ -19,6 +19,7 @@ export const apiLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute
   max: 120, 
   keyGenerator,
+  validate: { default: false }, // Disable all internal validations for custom keys (Fixes ERR_ERL_KEY_GEN_IPV6)
   message: {
     success: false,
     message: 'Too many requests. Please try again after a minute.'

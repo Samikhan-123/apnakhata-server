@@ -8,9 +8,8 @@ export class RecurringService {
     // If user provided a date, use it. If not, default to NOW.
     const baseDate = data.nextExecution ? new Date(data.nextExecution) : new Date();
     
-    // Always normalize to 12 PM Noon to align with Sync Job logic
     const nextExecution = new Date(baseDate);
-    nextExecution.setHours(12, 0, 0, 0);
+    nextExecution.setUTCHours(0, 0, 0, 0);
 
     return await recurringRepository.create({
       ...data,
@@ -23,9 +22,9 @@ export class RecurringService {
   calculateNextExecution(currentDate: Date, frequency: Frequency): Date {
     const next = new Date(currentDate);
 
-    // Normalize to 12 PM Noon for non-test frequencies to align with Cron job
+    // Normalize to 00:00 UTC to ensure reliability in the next day's cron cycle
     if (frequency !== 'TEN_SECONDS') {
-      next.setHours(12, 0, 0, 0);
+      next.setUTCHours(0, 0, 0, 0);
     }
 
     switch (frequency) {
@@ -117,7 +116,7 @@ export class RecurringService {
     
     // Force sync only if the task is actually due (nextExecution <= now)
     const userDueEntries = allEntries.filter(e => e.userId === userId && (
-      e.nextExecution <= now
+      new Date(e.nextExecution).getTime() <= now.getTime()
     ));
     
     const results = [];
