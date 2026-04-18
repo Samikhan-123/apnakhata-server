@@ -2,7 +2,7 @@ import { Router } from 'express';
 import supportController from './support.controller.js';
 import { authenticate } from '../../middlewares/auth.middleware.js';
 import rateLimit from 'express-rate-limit';
-import { maintenanceGuard } from '@/middlewares/maintenance.middleware.js';
+import { maintenanceGuard } from '../../middlewares/maintenance.middleware.js';
 
 const router = Router();
 

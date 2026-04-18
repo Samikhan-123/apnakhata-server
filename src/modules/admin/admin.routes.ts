@@ -3,7 +3,7 @@ import adminController from './admin.controller.js';
 import settingsController from './settings.controller.js';
 import maintenanceController from './maintenance.controller.js';
 import { authenticate, authorizeRoles } from '../../middlewares/auth.middleware.js';
-import { maintenanceGuard } from '@/middlewares/maintenance.middleware.js';
+import { maintenanceGuard } from '../../middlewares/maintenance.middleware.js';
 
 const router = Router();
 
