@@ -6,7 +6,8 @@ import {
   loginSchema, 
   otpSchema, 
   emailSchema, 
-  resetPasswordSchema
+  resetPasswordSchema,
+  preferencesSchema
 } from './auth.validation.js';
 import { AppError } from '../../middlewares/error.middleware.js';
 
@@ -163,6 +164,35 @@ export class AuthController {
         user: req.user,
         impersonatorId: req.impersonatorId,
         isReadOnly: req.isReadOnly
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Update user preferences
+   */
+  async updatePreferences(req: any, res: Response, next: NextFunction) {
+    try {
+      const validatedData = preferencesSchema.parse(req.body);
+      const userId = req.user.id;
+      const updatedUser = await authService.updatePreferences(userId, validatedData);
+      
+      // Update the user session/cookie if needed
+      // Since it's generic, we return the updated basic profile
+      res.status(200).json({
+        success: true,
+        message: 'Preferences updated successfully',
+        user: {
+          id: updatedUser.id,
+          email: updatedUser.email,
+          name: updatedUser.name,
+          baseCurrency: updatedUser.baseCurrency,
+          isVerified: updatedUser.isVerified,
+          role: (updatedUser as any).role,
+          createdAt: updatedUser.createdAt
+        }
       });
     } catch (error) {
       next(error);

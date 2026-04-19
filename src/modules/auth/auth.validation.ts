@@ -48,9 +48,16 @@ export const resetPasswordSchema = z.object({
   clientTimestamp: z.string().optional(),
 });
 
+// preferences schema
+export const preferencesSchema = z.object({
+  baseCurrency: z.string().min(1, 'Currency is required').max(5, 'Invalid currency code'),
+});
+
 // type inference 
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type OTPInput = z.infer<typeof otpSchema>;
 export type EmailInput = z.infer<typeof emailSchema>;
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
+export type PreferenceInput = z.infer<typeof preferencesSchema>;
+

@@ -13,9 +13,9 @@ export const maintenanceGuard = async (req: Request, res: Response, next: NextFu
       return next();
     }
 
-    // Bypass for Admins (if already authenticated)
+    // Bypass for Admins & Moderators (if already authenticated)
     const authReq = req as AuthRequest;
-    if (authReq.user && authReq.user.role === 'ADMIN') {
+    if (authReq.user && (authReq.user.role === 'ADMIN' || (authReq.user as any).role === 'MODERATOR')) {
       return next();
     }
 

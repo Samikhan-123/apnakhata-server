@@ -336,6 +336,15 @@ export class AuthService {
   }
 
   /**
+   * Update user preferences (currency, etc.)
+   */
+  async updatePreferences(userId: string, data: { baseCurrency: string }) {
+    return await authRepository.update(userId, {
+      baseCurrency: data.baseCurrency
+    });
+  }
+
+  /**
    * Helper to update user tracking information
    */
   private async updateUserTracking(userId: string, ip: string, userAgent: string) {
