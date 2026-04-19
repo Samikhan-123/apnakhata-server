@@ -47,7 +47,7 @@ export class MailService {
   }) {
     const html = supportNotificationTemplate(data);
     await sendEmail({
-      to: process.env.ADMIN_EMAIL || 'samikhan7816@gmail.com',
+      to: process.env.ADMIN_EMAIL!,
       subject: `[SUPPORT REQUEST] ${data.subject} - ${data.name}`,
       html
     });

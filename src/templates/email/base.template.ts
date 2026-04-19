@@ -37,8 +37,8 @@ export const baseTemplate = (content: string, customTimestamp?: string) => {
       ${content}
     </div>
     <div class="footer">
-      <p>&copy; 2026 apnaKhata.online | All Rights Reserved.</p>
-      <p>This is an automated system notification. For your security, do not share this email.</p>
+      <p>&copy; 2026 apnakhata.online | All Rights Reserved.</p>
+      <p>This is an automated system notification. Please do not reply to this email.</p>
       <div class="timestamp">Generated on: ${timestamp} (UTC)</div>
     </div>
   </div>
