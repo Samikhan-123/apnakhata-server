@@ -109,6 +109,7 @@ export class AdminService {
           lastLocation: true,
           lastDevice: true,
           metadata: true,
+          lastLogin: true,
           createdAt: true,
           _count: {
             select: {
@@ -434,33 +435,44 @@ export class AdminService {
 
     const volumeTrends = Object.values(trendsMap).sort((a,b) => a.date.localeCompare(b.date));
 
-    // 2. Category Breakdown (Platform Wide) - Group by both Category and Type
-    const categoryDistribution = await (prisma.ledgerEntry as any).groupBy({
+    // 2. Category Breakdown (Platform Wide) - Aggregated by Category Name for True Market View
+    const rawCategoryDistribution = await (prisma.ledgerEntry as any).groupBy({
       by: ['categoryId', 'type'],
       _sum: { amount: true },
-      _count: { id: true },
-      orderBy: {
-        _sum: { amount: 'desc' }
-      },
-      take: 15
+      _count: { id: true }
     });
 
-    const categoryIds = categoryDistribution.map((c: any) => c.categoryId).filter(Boolean) as string[];
+    const categoryIds = rawCategoryDistribution.map((c: any) => c.categoryId).filter(Boolean) as string[];
     const categories = await prisma.category.findMany({
       where: { id: { in: categoryIds } },
       select: { id: true, name: true, icon: true }
     });
 
-    const distribution = categoryDistribution.map((stat: any) => {
+    // 2.1 Consolidated aggregation by Name (Best Practice for Platform-Wide Analytics)
+    const consolidatedMap: Record<string, any> = {};
+
+    rawCategoryDistribution.forEach((stat: any) => {
       const cat = categories.find(c => c.id === stat.categoryId);
-      return {
-        name: cat?.name || 'Uncategorized',
-        icon: cat?.icon || 'Package',
-        value: Number(stat._sum.amount || 0),
-        count: stat._count.id,
-        type: stat.type
-      };
+      const name = cat?.name || 'Uncategorized';
+      const type = stat.type;
+      const key = `${name}_${type}`;
+
+      if (!consolidatedMap[key]) {
+        consolidatedMap[key] = {
+          name,
+          icon: cat?.icon || 'Package',
+          value: 0,
+          count: 0,
+          type
+        };
+      }
+      consolidatedMap[key].value += Number(stat._sum.amount || 0);
+      consolidatedMap[key].count += stat._count.id;
     });
+
+    const distribution = Object.values(consolidatedMap)
+      .sort((a: any, b: any) => b.value - a.value)
+      .slice(0, 15);
 
     // 3. Currency Distribution (User Preferences)
     const currencyDistribution = await (prisma.user as any).groupBy({
@@ -542,12 +554,21 @@ export class AdminService {
        };
     });
 
+    // 6. Real-time Platform Presence (DAU based on lastActive)
+    const twentyFourHoursAgo = new Date();
+    twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - 24);
+    
+    const activeUsersLast24h = await prisma.user.count({
+      where: { lastActive: { gte: twentyFourHoursAgo } }
+    });
+
     return {
       volumeTrends,
       categoryDistribution: distribution,
       currencyDistribution: currencies,
       activityTrends,
       topActiveUsers,
+      activeUsersLast24h,
       summary: {
         totalIncome: volumeTrends.reduce((acc, curr) => acc + curr.income, 0),
         totalExpense: volumeTrends.reduce((acc, curr) => acc + curr.expense, 0),

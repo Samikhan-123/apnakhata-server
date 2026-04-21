@@ -46,15 +46,20 @@ export const authenticate = async (req: AuthRequest, res: Response, next: NextFu
     req.impersonatorId = decoded.impersonatorId;
     req.isReadOnly = decoded.isReadOnly;
 
-    // --- REAL-TIME PRESENCE TRACKING ---
-    // Update lastActive timestamp on every request to track Online/Offline status
-    // We do this asynchronously to avoid blocking the main request flow
-    prisma.user.update({
-      where: { id: user.id },
-      data: { lastActive: new Date() }
-    }).catch(err => {
-      // console.error('Failed to update lastActive', err);
-    });
+    // --- REAL-TIME PRESENCE TRACKING (THROTTLED) ---
+    // Update lastActive timestamp if it hasn't been updated in the last 15 minutes
+    const now = new Date();
+    const lastActive = new Date(user.lastActive);
+    const throttleWindow = 15 * 60 * 1000; // 15 minutes (Optimized for performance)
+
+    if (now.getTime() - lastActive.getTime() > throttleWindow) {
+      prisma.user.update({
+        where: { id: user.id },
+        data: { lastActive: now }
+      }).catch(err => {
+        // console.error('Failed to update lastActive', err);
+      });
+    }
 
     // --- ZERO-TRUST READ-ONLY GUARD ---
     // If impersonating, strictly block all mutation methods unless it's the 'stop' endpoint

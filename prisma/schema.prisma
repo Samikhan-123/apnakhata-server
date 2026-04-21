@@ -3,6 +3,7 @@
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 generator client {
@@ -37,6 +38,7 @@ model User {
   updatedAt         DateTime           @updatedAt
   isActive          Boolean            @default(true)
   lastActive        DateTime           @default(now())
+  lastLogin         DateTime           @default(now())
   deletionScheduledAt DateTime?
   deletionRequestedBy UserRole?
   adminActions      AdminLog[]         @relation("AdminActions")

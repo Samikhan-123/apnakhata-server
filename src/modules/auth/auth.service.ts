@@ -56,7 +56,7 @@ export class AuthService {
 
     // Update Tracking Info (Registration)
     if (ip && userAgent) {
-       this.updateUserTracking(user.id, ip, userAgent).catch(e => {});
+       this.updateUserTracking(user.id, ip, userAgent, true).catch(e => {});
     }
 
     const token = generateToken(user.id);
@@ -85,7 +85,7 @@ export class AuthService {
     
     // Update Tracking Info
     if (data.ip && data.userAgent) {
-      this.updateUserTracking(user.id, data.ip, data.userAgent).catch(e => {});
+      this.updateUserTracking(user.id, data.ip, data.userAgent, true).catch(e => {});
     }
 
     // Audit Login if Admin/Moderator
@@ -288,7 +288,7 @@ export class AuthService {
 
       // Update Tracking Info
       if (ip && userAgent) {
-        this.updateUserTracking(user.id, ip, userAgent).catch(e => {});
+        this.updateUserTracking(user.id, ip, userAgent, true).catch(e => {});
       }
 
       // Audit Login if Admin/Moderator
@@ -347,7 +347,7 @@ export class AuthService {
   /**
    * Helper to update user tracking information
    */
-  private async updateUserTracking(userId: string, ip: string, userAgent: string) {
+  private async updateUserTracking(userId: string, ip: string, userAgent: string, isLogin: boolean = false) {
     const location = await getLocationFromIp(ip);
     const device = parseUserAgent(userAgent);
 
@@ -355,13 +355,19 @@ export class AuthService {
       ? ` (${device.vendor ? `${device.vendor} ` : ''}${device.model})` 
       : (device.isMobile ? ' (Mobile Device)' : ' (Desktop)');
     
-    await authRepository.update(userId, {
+    const updateData: any = {
       lastIp: ip,
       lastUserAgent: userAgent,
       lastLocation: location?.isLookupSuccessful ? `${location.city}, ${location.country}` : 'Unknown Location',
       lastDevice: `${device.browser} on ${device.os}${hardwareInfo}`,
       metadata: location || {}
-    });
+    };
+
+    if (isLogin) {
+      updateData.lastLogin = new Date();
+    }
+
+    await authRepository.update(userId, updateData);
   }
 }
 
