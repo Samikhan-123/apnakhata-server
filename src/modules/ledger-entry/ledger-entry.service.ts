@@ -29,12 +29,16 @@ export class LedgerEntryService {
       }
     }
 
+    // 3. Date Normalization: Hybrid Logic
+    const finalDate = this.normalizeEntryDate(new Date(data.date || new Date()));
+
     // Enforce 3-Month Window for creation
-    this.validateDateWindow(new Date(data.date || new Date()));
+    this.validateDateWindow(finalDate);
 
     // Standard income/expense entry. Normalized to lowercase.
     return await ledgerEntryRepository.create(userId, {
       ...data,
+      date: finalDate.toISOString(),
       description: data.description.toLowerCase()
     });
   }
@@ -85,6 +89,30 @@ export class LedgerEntryService {
   }
 
   /**
+   * Normalizes Entry Date (Hybrid Logic)
+   * - Today: Keeps Current Time (Preserves real-time sequence)
+   * - Past/Future: Sets to 12:00 PM (Avoids timezone jumping/Midnight issues)
+   */
+  private normalizeEntryDate(targetDate: Date): Date {
+    const now = new Date();
+    
+    const isSameDay = 
+      targetDate.getUTCDate() === now.getUTCDate() &&
+      targetDate.getUTCMonth() === now.getUTCMonth() &&
+      targetDate.getUTCFullYear() === now.getUTCFullYear();
+
+    if (isSameDay) {
+      // Use current precise server time
+      return now;
+    } else {
+      // Normalize to stable Mid-day (12:00:00)
+      const normalized = new Date(targetDate);
+      normalized.setUTCHours(12, 0, 0, 0);
+      return normalized;
+    }
+  }
+
+  /**
    * Delete a ledger entry
    */
   async delete(userId: string, id: string) {
@@ -114,8 +142,10 @@ export class LedgerEntryService {
     this.validateDateWindow(new Date(existingEntry.date));
 
     // Enforce 3-Month Window for update (New Date if being changed)
+    let finalDate: Date | undefined;
     if (data.date) {
-      this.validateDateWindow(new Date(data.date));
+      finalDate = this.normalizeEntryDate(new Date(data.date));
+      this.validateDateWindow(finalDate);
     }
 
     // Income First Rule for Updates
@@ -142,7 +172,7 @@ export class LedgerEntryService {
       data: {
         ...(data.amount && { amount: data.amount }),
         ...(data.description && { description: data.description.toLowerCase() }),
-        ...(data.date && { date: new Date(data.date) }),
+        ...(finalDate && { date: finalDate.toISOString() }),
         ...(data.type && { type: data.type }),
         ...(data.categoryId && { categoryId: data.categoryId }),
       },

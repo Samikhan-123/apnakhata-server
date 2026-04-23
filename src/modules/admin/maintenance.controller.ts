@@ -10,21 +10,36 @@ import logger from '../../utils/logger.js';
  */
 export class MaintenanceController {
   async runMaintenance(req: Request, res: Response, next: NextFunction) {
-    // 1. Secret Key Check for Vercel Cron Security
-    // This prevents random users from triggering heavy database operations.
-    const cronSecret = req.headers['x-cron-secret'];
+    // 1. Dual-Auth Strategy: Check for Cron Secret OR Admin Session
+    // Supports standard Vercel 'Authorization: Bearer' header and custom 'x-cron-secret'
+    const authHeader = req.headers['authorization'];
+    const cronSecretHeader = req.headers['x-cron-secret'];
+    const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
+    
+    const providedSecret = bearerToken || cronSecretHeader;
     const expectedSecret = process.env.CRON_SECRET;
 
-    if (expectedSecret && cronSecret !== expectedSecret) {
-      logger.warn('[MAINTENANCE] Unauthorized maintenance attempt blocked (Invalid Secret).');
-      return res.status(401).json({ success: false, message: 'Unauthorized access to system maintenance.' });
+    // Check if it's a valid Cron request
+    const isCronAuthorized = expectedSecret && providedSecret === expectedSecret;
+    
+    // Check if it's a manual Admin trigger (via session/cookie)
+    const isAdminAuthorized = (req as any).user?.role === 'ADMIN';
+
+    if (!isCronAuthorized && !isAdminAuthorized) {
+      logger.warn('[MAINTENANCE] Unauthorized attempt blocked. (Missing Secret or Admin Session)');
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Forbidden: Automated maintenance requires a valid system secret or administrative session.' 
+      });
     }
 
-    logger.info('[MAINTENANCE] Unified Maintenance Cycle Initiated... ⚙️');
+    const triggerSource = isCronAuthorized ? 'AUTOMATED_CRON' : `MANUAL_ADMIN (${(req as any).user?.name})`;
+    logger.info(`[MAINTENANCE] Unified Cycle Initiated... ⚙️ (Source: ${triggerSource})`);
 
     try {
       const results: any = {
         timestamp: new Date().toISOString(),
+        triggeredBy: triggerSource
       };
 
       // TASK A: Administrative Cleanup (Accounts & Logs)
@@ -43,7 +58,7 @@ export class MaintenanceController {
       logger.info(`[MAINTENANCE] Recurring Sub-task: Processed ${results.recurring.totalProcessed} entry patterns.`);
 
       // TASK C: Log Maintenance Event to Audit Trail
-      await auditService.log(null, 'SYSTEM_MAINTENANCE', undefined, results);
+      await auditService.log((req as any).user?.id || null, 'SYSTEM_MAINTENANCE', undefined, results);
 
       logger.info('[MAINTENANCE] Unified Maintenance Cycle Completed Successfully. ✅');
 

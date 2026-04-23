@@ -75,6 +75,38 @@ export const authenticate = async (req: AuthRequest, res: Response, next: NextFu
   }
 };
 
+/**
+ * authenticateOptional
+ * Similar to authenticate, but does not throw errors if the user is missing.
+ * Useful for dual-auth endpoints (Crons + Manual Admin Overrides).
+ */
+export const authenticateOptional = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    let token = req.cookies?.token;
+    if (!token && req.headers.authorization?.startsWith('Bearer ')) {
+      token = req.headers.authorization.split(' ')[1];
+    }
+
+    if (!token) return next();
+
+    const decoded = verifyToken(token);
+    const id = decoded.id || decoded.userId;
+    if (!id) return next();
+
+    const user = await authRepository.findById(id);
+    if (!user || !user.isActive) return next();
+
+    req.user = user;
+    req.impersonatorId = decoded.impersonatorId;
+    req.isReadOnly = decoded.isReadOnly;
+
+    next();
+  } catch (error) {
+    // Silent fail for optional auth - proceed as anonymous
+    next();
+  }
+};
+
 export const authorizeVerified = async (req: AuthRequest, res: Response, next: NextFunction) => {
   if (!req.user) {
     return next(new AppError('Unauthorized - Please log in first', 401));

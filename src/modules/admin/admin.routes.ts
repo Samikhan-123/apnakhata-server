@@ -2,14 +2,15 @@ import { Router } from 'express';
 import adminController from './admin.controller.js';
 import settingsController from './settings.controller.js';
 import maintenanceController from './maintenance.controller.js';
-import { authenticate, authorizeRoles } from '../../middlewares/auth.middleware.js';
+import { authenticate, authorizeRoles, authenticateOptional } from '../../middlewares/auth.middleware.js';
 import { maintenanceGuard } from '../../middlewares/maintenance.middleware.js';
 
 const router = Router();
 
 // --- SYSTEM MAINTENANCE (CRON SECURE) ---
-// This endpoint is hit by Vercel Cron. No session required, uses CRON_SECRET.
-router.post('/maintenance', maintenanceController.runMaintenance);
+// This endpoint is hit by Vercel Cron OR manual Admin trigger.
+// Optional auth allows session detection for admins without blocking crons.
+router.post('/maintenance', authenticateOptional, maintenanceController.runMaintenance);
 
 // Base Authentication for all other admin routes
 router.use(authenticate);
