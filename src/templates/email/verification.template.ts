@@ -1,4 +1,4 @@
-import { baseTemplate } from './base.template.js';
+import { baseTemplate } from "./base.template.js";
 
 export const verificationTemplate = (otp: string, customTimestamp?: string) => {
   const content = `
@@ -13,6 +13,6 @@ export const verificationTemplate = (otp: string, customTimestamp?: string) => {
     
     <p style="font-size: 13px; color: #94a3b8; font-weight: 600;">If you did not request this code, no further action is required. Your account remains secure.</p>
   `;
-  
+
   return baseTemplate(content, customTimestamp);
 };

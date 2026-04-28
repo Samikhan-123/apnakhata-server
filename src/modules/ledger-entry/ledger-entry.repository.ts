@@ -1,5 +1,8 @@
-import prisma from '../../config/prisma.js';
-import { CreateLedgerEntryInput, LedgerEntryFilters } from './ledger-entry.validation.js';
+import prisma from "../../config/prisma.js";
+import {
+  CreateLedgerEntryInput,
+  LedgerEntryFilters,
+} from "./ledger-entry.validation.js";
 
 export class LedgerEntryRepository {
   async create(userId: string, data: CreateLedgerEntryInput, tx?: any) {
@@ -15,12 +18,20 @@ export class LedgerEntryRepository {
       },
       include: {
         category: true,
-      }
+      },
     });
   }
 
   async findAll(userId: string, filters: LedgerEntryFilters) {
-    const { categoryId, startDate, endDate, type, search, page = 1, limit = 20 } = filters;
+    const {
+      categoryId,
+      startDate,
+      endDate,
+      type,
+      search,
+      page = 1,
+      limit = 20,
+    } = filters;
     const skip = (page - 1) * limit;
 
     const where = {
@@ -29,15 +40,17 @@ export class LedgerEntryRepository {
       ...(type && { type }),
       ...(search && {
         OR: [
-          { description: { contains: search, mode: 'insensitive' as const } },
-        ]
+          { description: { contains: search, mode: "insensitive" as const } },
+        ],
       }),
-      ...(startDate || endDate ? {
-        date: {
-          ...(startDate && { gte: new Date(startDate) }),
-          ...(endDate && { lte: new Date(endDate) }),
-        }
-      } : {}),
+      ...(startDate || endDate
+        ? {
+            date: {
+              ...(startDate && { gte: new Date(startDate) }),
+              ...(endDate && { lte: new Date(endDate) }),
+            },
+          }
+        : {}),
     };
 
     const [items, total] = await Promise.all([
@@ -46,14 +59,11 @@ export class LedgerEntryRepository {
         include: {
           category: true,
         },
-        orderBy: [
-          { date: 'desc' },
-          { createdAt: 'desc' }
-        ],
+        orderBy: [{ date: "desc" }, { createdAt: "desc" }],
         skip,
         take: limit,
       }),
-      prisma.ledgerEntry.count({ where })
+      prisma.ledgerEntry.count({ where }),
     ]);
 
     const totalPages = Math.ceil(total / limit);
@@ -66,64 +76,78 @@ export class LedgerEntryRepository {
       where: { id, userId },
       include: {
         category: true,
-      }
+      },
     });
   }
 
-  async getFinancialSummary(userId: string, filters: { startDate?: string | Date; endDate?: string | Date; categoryId?: string; search?: string } = {}) {
+  async getFinancialSummary(
+    userId: string,
+    filters: {
+      startDate?: string | Date;
+      endDate?: string | Date;
+      categoryId?: string;
+      search?: string;
+    } = {},
+  ) {
     const { startDate, endDate, categoryId, search } = filters;
 
     // Common date and search filters
     const commonFilter = {
-      ...(startDate || endDate ? {
-        date: {
-          ...(startDate && { gte: new Date(startDate) }),
-          ...(endDate && { lte: new Date(endDate) }),
-        }
-      } : {}),
+      ...(startDate || endDate
+        ? {
+            date: {
+              ...(startDate && { gte: new Date(startDate) }),
+              ...(endDate && { lte: new Date(endDate) }),
+            },
+          }
+        : {}),
       ...(search && {
-        description: { contains: search, mode: 'insensitive' as const }
-      })
+        description: { contains: search, mode: "insensitive" as const },
+      }),
     };
 
     const [incomeStats, expenseStats] = await Promise.all([
       // Income should NOT be filtered by category (as income usually has no category)
       prisma.ledgerEntry.groupBy({
-        by: ['type'],
+        by: ["type"],
         where: {
           userId,
-          type: 'INCOME',
-          ...commonFilter
+          type: "INCOME",
+          ...commonFilter,
         },
-        _sum: { amount: true }
+        _sum: { amount: true },
       }),
       // Expense should be filtered by category if specified
       prisma.ledgerEntry.groupBy({
-        by: ['type'],
+        by: ["type"],
         where: {
           userId,
-          type: 'EXPENSE',
+          type: "EXPENSE",
           ...(categoryId && { categoryId }),
-          ...commonFilter
+          ...commonFilter,
         },
-        _sum: { amount: true }
-      })
+        _sum: { amount: true },
+      }),
     ]);
 
-    const income = Number(incomeStats.find((s: any) => s.type === 'INCOME')?._sum.amount || 0);
-    const expense = Number(expenseStats.find((s: any) => s.type === 'EXPENSE')?._sum.amount || 0);
+    const income = Number(
+      incomeStats.find((s: any) => s.type === "INCOME")?._sum.amount || 0,
+    );
+    const expense = Number(
+      expenseStats.find((s: any) => s.type === "EXPENSE")?._sum.amount || 0,
+    );
 
     return {
       totalIncome: income,
       totalExpense: expense,
-      remainingBalance: income - expense
+      remainingBalance: income - expense,
     };
   }
 
   async delete(id: string, userId: string, tx?: any) {
     const client = tx || prisma;
     return await client.ledgerEntry.delete({
-      where: { id, userId }
+      where: { id, userId },
     });
   }
 }

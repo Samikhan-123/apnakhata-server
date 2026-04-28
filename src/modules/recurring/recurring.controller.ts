@@ -1,16 +1,19 @@
-import { Request, Response, NextFunction } from 'express';
-import recurringService from './recurring.service.js';
-import { CreateRecurringSchema } from './recurring.validation.js';
+import { Request, Response, NextFunction } from "express";
+import recurringService from "./recurring.service.js";
+import { CreateRecurringSchema } from "./recurring.validation.js";
 
 export class RecurringController {
   async create(req: any, res: Response, next: NextFunction) {
     try {
       const validatedData = CreateRecurringSchema.parse(req.body);
-      const entry = await recurringService.createEntry(req.user.id, validatedData);
-      
+      const entry = await recurringService.createEntry(
+        req.user.id,
+        validatedData,
+      );
+
       // Instant Sync: Attempt to process due tasks immediately (especially helpful for 'Today' starts)
       await recurringService.triggerUserSync(req.user.id);
-      
+
       res.status(201).json({
         success: true,
         data: entry,
@@ -38,7 +41,7 @@ export class RecurringController {
       await recurringService.deleteEntry(id, req.user.id);
       res.status(200).json({
         success: true,
-        message: 'Recurring entry deleted successfully',
+        message: "Recurring entry deleted successfully",
       });
     } catch (error) {
       next(error);

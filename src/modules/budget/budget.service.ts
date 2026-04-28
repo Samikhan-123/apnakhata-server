@@ -1,7 +1,7 @@
-import budgetRepository from './budget.repository.js';
-import prisma from '../../config/prisma.js';
-import { CreateBudgetInput, UpdateBudgetInput } from './budget.validation.js';
-import { AppError } from '../../middlewares/error.middleware.js';
+import budgetRepository from "./budget.repository.js";
+import prisma from "../../config/prisma.js";
+import { CreateBudgetInput, UpdateBudgetInput } from "./budget.validation.js";
+import { AppError } from "../../middlewares/error.middleware.js";
 
 export class BudgetService {
   /**
@@ -9,7 +9,7 @@ export class BudgetService {
    */
   async getBudgetsWithProgress(userId: string, month: number, year: number) {
     const budgets = await budgetRepository.findAll(userId, month, year);
-    
+
     // For each budget, calculate spent amount
     const budgetsWithProgress = await Promise.all(
       budgets.map(async (budget: any) => {
@@ -17,7 +17,7 @@ export class BudgetService {
           where: {
             userId,
             categoryId: budget.categoryId,
-            type: 'EXPENSE',
+            type: "EXPENSE",
             date: {
               gte: new Date(year, month - 1, 1),
               lt: new Date(year, month, 1),
@@ -30,9 +30,10 @@ export class BudgetService {
         // calculate spent amount
         const spentAmount = Number(spent._sum.amount || 0);
         // calculate progress
-        const progress = budget.limit.toNumber() > 0 
-          ? (spentAmount / budget.limit.toNumber()) * 100 
-          : 0;
+        const progress =
+          budget.limit.toNumber() > 0
+            ? (spentAmount / budget.limit.toNumber()) * 100
+            : 0;
 
         return {
           ...budget,
@@ -40,7 +41,7 @@ export class BudgetService {
           progress: Math.min(progress, 100),
           isOverBudget: spentAmount > budget.limit.toNumber(),
         };
-      })
+      }),
     );
 
     return budgetsWithProgress;

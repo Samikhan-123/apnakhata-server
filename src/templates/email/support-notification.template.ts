@@ -1,4 +1,4 @@
-import { baseTemplate } from './base.template.js';
+import { baseTemplate } from "./base.template.js";
 
 export const supportNotificationTemplate = (data: {
   name: string;
@@ -23,7 +23,7 @@ export const supportNotificationTemplate = (data: {
       <p style="font-size: 16px; font-weight: 700; color: #0f172a; margin: 0;">${data.name} (${data.email})</p>
       <p style="font-size: 12px; font-weight: 600; color: #64748b; margin-top: 4px;">
         Role: <span style="color: #2563eb;">${data.userRole}</span> | 
-        Verified: <span style="${data.isAuthenticated ? 'color: #10b981;' : 'color: #f43f5e;'}">${data.isAuthenticated ? 'Yes' : 'No'}</span>
+        Verified: <span style="${data.isAuthenticated ? "color: #10b981;" : "color: #f43f5e;"}">${data.isAuthenticated ? "Yes" : "No"}</span>
       </p>
     </div>
 
@@ -40,8 +40,8 @@ export const supportNotificationTemplate = (data: {
     <hr style="border: none; border-top: 1px dashed #e2e8f0; margin: 40px 0;">
     
     <div style="text-align: right; color: #94a3b8; font-size: 11px; font-weight: 600;">
-       Source: ${data.location || 'Unknown'} | Device: ${data.device || 'Unknown'}<br />
-       IP: ${data.ip} ${data.clientTimestamp ? `| Time: ${data.clientTimestamp}` : ''}
+       Source: ${data.location || "Unknown"} | Device: ${data.device || "Unknown"}<br />
+       IP: ${data.ip} ${data.clientTimestamp ? `| Time: ${data.clientTimestamp}` : ""}
     </div>
   `;
 

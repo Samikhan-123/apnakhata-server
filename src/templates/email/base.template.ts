@@ -1,11 +1,13 @@
 // src/templates/email/base.template.ts
 export const baseTemplate = (content: string, customTimestamp?: string) => {
-  const timestamp = customTimestamp || new Date().toLocaleString('en-US', {
-    timeZone: 'UTC',
-    dateStyle: 'medium',
-    timeStyle: 'medium',
-    hour12: true,
-  }) + ' UTC';
+  const timestamp =
+    customTimestamp ||
+    new Date().toLocaleString("en-US", {
+      timeZone: "UTC",
+      dateStyle: "medium",
+      timeStyle: "medium",
+      hour12: true,
+    }) + " UTC";
 
   return `
 <!DOCTYPE html>

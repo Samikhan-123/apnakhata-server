@@ -1,5 +1,5 @@
-import { PrismaClient, Frequency, LedgerEntryType } from '@prisma/client';
-import prisma from '../../config/prisma.js';
+import { PrismaClient, Frequency, LedgerEntryType } from "@prisma/client";
+import prisma from "../../config/prisma.js";
 
 export interface CreateRecurringInput {
   userId: string;
@@ -18,7 +18,7 @@ export class RecurringRepository {
         ...data,
         description: data.description.toLowerCase(),
         amount: data.amount,
-      }
+      },
     });
   }
 
@@ -28,7 +28,7 @@ export class RecurringRepository {
       include: {
         category: true,
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: "desc" },
     });
   }
 
@@ -37,9 +37,9 @@ export class RecurringRepository {
       where: {
         isActive: true,
         nextExecution: {
-          lte: new Date()
-        }
-      }
+          lte: new Date(),
+        },
+      },
     });
   }
 
@@ -49,21 +49,23 @@ export class RecurringRepository {
       where: { id },
       data: {
         ...data,
-        ...(data.description && { description: data.description.toLowerCase() })
-      }
+        ...(data.description && {
+          description: data.description.toLowerCase(),
+        }),
+      },
     });
   }
 
   async delete(id: string, userId: string) {
     return await prisma.recurringEntry.delete({
-      where: { id, userId }
+      where: { id, userId },
     });
   }
 
   async findById(id: string) {
     return await prisma.recurringEntry.findUnique({
       where: { id },
-      include: { category: true }
+      include: { category: true },
     });
   }
 }

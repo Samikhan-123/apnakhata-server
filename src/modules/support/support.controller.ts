@@ -1,9 +1,13 @@
-import { Request, Response, NextFunction } from 'express';
-import { contactSchema } from './support.validation.js';
-import mailService from '../auth/mail.service.js';
-import { AppError } from '../../middlewares/error.middleware.js';
-import { AuthRequest } from '../../middlewares/auth.middleware.js';
-import { parseUserAgent, getLocationFromIp, getClientIp } from '../../utils/location.util.js';
+import { Request, Response, NextFunction } from "express";
+import { contactSchema } from "./support.validation.js";
+import mailService from "../auth/mail.service.js";
+import { AppError } from "../../middlewares/error.middleware.js";
+import { AuthRequest } from "../../middlewares/auth.middleware.js";
+import {
+  parseUserAgent,
+  getLocationFromIp,
+  getClientIp,
+} from "../../utils/location.util.js";
 
 export class SupportController {
   /**
@@ -16,14 +20,14 @@ export class SupportController {
 
       // Identify if the sender is an authenticated user
       const isAuthenticated = !!req.user;
-      const userRole = req.user?.role || 'GUEST';
-      
+      const userRole = req.user?.role || "GUEST";
+
       // Parse technical info
-      const userAgent = req.headers['user-agent'] || 'unknown';
+      const userAgent = req.headers["user-agent"] || "unknown";
       const ip = getClientIp(req);
       const device = parseUserAgent(userAgent);
       const location = await getLocationFromIp(ip);
-      
+
       // Send email to Admin
       await mailService.sendSupportNotification({
         name,
@@ -33,14 +37,17 @@ export class SupportController {
         userRole,
         isAuthenticated,
         ip: ip,
-        location: location ? `${location.city}, ${location.country}` : 'Unknown',
+        location: location
+          ? `${location.city}, ${location.country}`
+          : "Unknown",
         device: `${device.browser} on ${device.os} (${device.device})`,
-        clientTimestamp
+        clientTimestamp,
       });
 
       res.status(200).json({
         success: true,
-        message: 'Your message has been sent successfully. Our team will get back to you soon.'
+        message:
+          "Your message has been sent successfully. Our team will get back to you soon.",
       });
     } catch (error) {
       next(error);

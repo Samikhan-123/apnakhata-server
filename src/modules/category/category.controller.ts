@@ -1,7 +1,10 @@
-import { Response, NextFunction } from 'express';
-import { AuthRequest } from '../../middlewares/auth.middleware.js';
-import categoryService from './category.service.js';
-import { createCategorySchema, updateCategorySchema } from './category.validation.js';
+import { Response, NextFunction } from "express";
+import { AuthRequest } from "../../middlewares/auth.middleware.js";
+import categoryService from "./category.service.js";
+import {
+  createCategorySchema,
+  updateCategorySchema,
+} from "./category.validation.js";
 
 export class CategoryController {
   /**
@@ -42,7 +45,11 @@ export class CategoryController {
     try {
       const id = req.params.id as string;
       const validatedData = updateCategorySchema.parse(req.body);
-      const category = await categoryService.update(req.user.id, id, validatedData);
+      const category = await categoryService.update(
+        req.user.id,
+        id,
+        validatedData,
+      );
       res.status(200).json({
         success: true,
         data: category,
@@ -53,7 +60,7 @@ export class CategoryController {
   }
 
   /**
-   * Delete a category 
+   * Delete a category
    */
   async delete(req: AuthRequest, res: Response, next: NextFunction) {
     try {
@@ -61,7 +68,7 @@ export class CategoryController {
       await categoryService.delete(req.user.id, id);
       res.status(200).json({
         success: true,
-        message: 'Category deleted successfully',
+        message: "Category deleted successfully",
       });
     } catch (error) {
       next(error);

@@ -1,8 +1,8 @@
-import rateLimit from 'express-rate-limit';
-import { Request } from 'express';
+import rateLimit from "express-rate-limit";
+import { Request } from "express";
 
 /**
- * Smart Key Generator: 
+ * Smart Key Generator:
  * Prioritizes User ID (Authenticated) to avoid IP-clashing for legitimate users on shared networks.
  * Falls back to IP for anonymous traffic.
  */
@@ -17,12 +17,12 @@ const keyGenerator = (req: Request) => {
  */
 export const apiLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute
-  max: 120, 
+  max: 120,
   keyGenerator,
   validate: { default: false }, // Disable all internal validations for custom keys (Fixes ERR_ERL_KEY_GEN_IPV6)
   message: {
     success: false,
-    message: 'Too many requests. Please try again after a minute.'
+    message: "Too many requests. Please try again after a minute.",
   },
   standardHeaders: true,
   legacyHeaders: false,
@@ -32,7 +32,7 @@ export const apiLimiter = rateLimit({
 /**
  * Sensitive Auth Rate Limiter
  * 5 requests per 5 minutes
- * Strictly IP-based to prevent brute-force attacks on individual accounts 
+ * Strictly IP-based to prevent brute-force attacks on individual accounts
  * or batch attacks from specific nodes.
  */
 export const authLimiter = rateLimit({
@@ -40,7 +40,8 @@ export const authLimiter = rateLimit({
   max: 5,
   message: {
     success: false,
-    message: 'Too many authentication attempts. Please try again after 5 minutes.'
+    message:
+      "Too many authentication attempts. Please try again after 5 minutes.",
   },
   standardHeaders: true,
   legacyHeaders: false,

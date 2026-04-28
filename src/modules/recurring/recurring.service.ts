@@ -1,13 +1,15 @@
-import { Frequency } from '@prisma/client';
-import recurringRepository from './recurring.repository.js';
-import ledgerEntryRepository from '../ledger-entry/ledger-entry.repository.js';
-import prisma from '../../config/prisma.js';
+import { Frequency } from "@prisma/client";
+import recurringRepository from "./recurring.repository.js";
+import ledgerEntryRepository from "../ledger-entry/ledger-entry.repository.js";
+import prisma from "../../config/prisma.js";
 
 export class RecurringService {
   async createEntry(userId: string, data: any) {
     // If user provided a date, use it. If not, default to NOW.
-    const baseDate = data.nextExecution ? new Date(data.nextExecution) : new Date();
-    
+    const baseDate = data.nextExecution
+      ? new Date(data.nextExecution)
+      : new Date();
+
     const nextExecution = new Date(baseDate);
     nextExecution.setUTCHours(0, 0, 0, 0);
 
@@ -23,24 +25,24 @@ export class RecurringService {
     const next = new Date(currentDate);
 
     // Normalize to 00:00 UTC to ensure reliability in the next day's cron cycle
-    if (frequency !== 'TEN_SECONDS') {
+    if (frequency !== "TEN_SECONDS") {
       next.setUTCHours(0, 0, 0, 0);
     }
 
     switch (frequency) {
-      case 'TEN_SECONDS':
+      case "TEN_SECONDS":
         next.setSeconds(next.getSeconds() + 10);
         break;
-      case 'DAILY':
+      case "DAILY":
         next.setDate(next.getDate() + 1);
         break;
-      case 'WEEKLY':
+      case "WEEKLY":
         next.setDate(next.getDate() + 7);
         break;
-      case 'MONTHLY':
+      case "MONTHLY":
         next.setMonth(next.getMonth() + 1);
         break;
-      case 'YEARLY':
+      case "YEARLY":
         next.setFullYear(next.getFullYear() + 1);
         break;
     }
@@ -55,35 +57,51 @@ export class RecurringService {
       try {
         await prisma.$transaction(async (tx: any) => {
           // 0. Income First Rule for Recurring Expenses
-          if (entry.type === 'EXPENSE') {
-            const summary = await ledgerEntryRepository.getFinancialSummary(entry.userId);
-            if (summary.totalIncome <= 0 || summary.remainingBalance < Number(entry.amount)) {
+          if (entry.type === "EXPENSE") {
+            const summary = await ledgerEntryRepository.getFinancialSummary(
+              entry.userId,
+            );
+            if (
+              summary.totalIncome <= 0 ||
+              summary.remainingBalance < Number(entry.amount)
+            ) {
               await recurringRepository.update(entry.id, {
-                lastStatus: 'INSUFFICIENT_BALANCE',
-                lastStatusDate: new Date()
+                lastStatus: "INSUFFICIENT_BALANCE",
+                lastStatusDate: new Date(),
               });
               return; // Skip this entry in this run
             }
           }
 
           // 1. Create Ledger Entry
-          await ledgerEntryRepository.create(entry.userId, {
-            amount: Number(entry.amount),
-            description: `[auto-completed] ${entry.description}`,
-            type: entry.type,
-            categoryId: entry.categoryId || undefined,
-            date: new Date().toISOString(),
-          }, tx);
+          await ledgerEntryRepository.create(
+            entry.userId,
+            {
+              amount: Number(entry.amount),
+              description: `[auto-completed] ${entry.description}`,
+              type: entry.type,
+              categoryId: entry.categoryId || undefined,
+              date: new Date().toISOString(),
+            },
+            tx,
+          );
 
           // 2. Update Entry nextExecution and increment hits
-          const nextExecution = this.calculateNextExecution(entry.nextExecution, entry.frequency);
-          await recurringRepository.update(entry.id, {
-            nextExecution,
-            lastExecution: new Date(),
-            hits: { increment: 1 },
-            lastStatus: 'SUCCESS',
-            lastStatusDate: new Date()
-          }, tx);
+          const nextExecution = this.calculateNextExecution(
+            entry.nextExecution,
+            entry.frequency,
+          );
+          await recurringRepository.update(
+            entry.id,
+            {
+              nextExecution,
+              lastExecution: new Date(),
+              hits: { increment: 1 },
+              lastStatus: "SUCCESS",
+              lastStatusDate: new Date(),
+            },
+            tx,
+          );
         });
 
         results.push({ id: entry.id, success: true });
@@ -113,12 +131,14 @@ export class RecurringService {
   async triggerUserSync(userId: string) {
     const allEntries = await recurringRepository.findAll(userId);
     const now = new Date();
-    
+
     // Force sync only if the task is actually due (nextExecution <= now)
-    const userDueEntries = allEntries.filter(e => e.userId === userId && (
-      new Date(e.nextExecution).getTime() <= now.getTime()
-    ));
-    
+    const userDueEntries = allEntries.filter(
+      (e) =>
+        e.userId === userId &&
+        new Date(e.nextExecution).getTime() <= now.getTime(),
+    );
+
     const results = [];
     let skippedCount = 0;
 
@@ -127,58 +147,84 @@ export class RecurringService {
         await this.processSingleEntry(entry);
         results.push({ id: entry.id, success: true });
       } catch (error: any) {
-        if (error.message === 'Insufficient balance') {
+        if (error.message === "Insufficient balance") {
           skippedCount++;
         }
-        results.push({ id: entry.id, success: false, reason: error.message || 'Unknown error' });
+        results.push({
+          id: entry.id,
+          success: false,
+          reason: error.message || "Unknown error",
+        });
       }
     }
 
-    const finalSuccessCount = results.filter(r => r.success).length;
+    const finalSuccessCount = results.filter((r) => r.success).length;
     let message = `Successfully synced ${finalSuccessCount} tasks.`;
-    
+
     if (skippedCount > 0) {
       message += ` (${skippedCount} skipped due to balance)`;
     } else if (results.length > 0 && finalSuccessCount === 0) {
-      const firstFailure = results.find(r => !r.success);
+      const firstFailure = results.find((r) => !r.success);
       if (firstFailure) {
         message += ` (Reason: ${firstFailure.reason})`;
       }
     }
 
-    return { message, count: results.length, successCount: finalSuccessCount, skippedCount, results };
+    return {
+      message,
+      count: results.length,
+      successCount: finalSuccessCount,
+      skippedCount,
+      results,
+    };
   }
 
   private async processSingleEntry(entry: any) {
     return await prisma.$transaction(async (tx: any) => {
       // Income First Rule
-      if (entry.type === 'EXPENSE') {
-        const summary = await ledgerEntryRepository.getFinancialSummary(entry.userId);
-        if (summary.totalIncome <= 0 || summary.remainingBalance < Number(entry.amount)) {
-           await recurringRepository.update(entry.id, {
-             lastStatus: 'INSUFFICIENT_BALANCE',
-             lastStatusDate: new Date()
-           });
-           throw new Error('Insufficient balance');
+      if (entry.type === "EXPENSE") {
+        const summary = await ledgerEntryRepository.getFinancialSummary(
+          entry.userId,
+        );
+        if (
+          summary.totalIncome <= 0 ||
+          summary.remainingBalance < Number(entry.amount)
+        ) {
+          await recurringRepository.update(entry.id, {
+            lastStatus: "INSUFFICIENT_BALANCE",
+            lastStatusDate: new Date(),
+          });
+          throw new Error("Insufficient balance");
         }
       }
 
-      await ledgerEntryRepository.create(entry.userId, {
-        amount: Number(entry.amount),
-        description: `[auto-completed] ${entry.description}`,
-        type: entry.type,
-        categoryId: entry.categoryId || undefined,
-        date: new Date().toISOString(),
-      }, tx);
+      await ledgerEntryRepository.create(
+        entry.userId,
+        {
+          amount: Number(entry.amount),
+          description: `[auto-completed] ${entry.description}`,
+          type: entry.type,
+          categoryId: entry.categoryId || undefined,
+          date: new Date().toISOString(),
+        },
+        tx,
+      );
 
-      const nextExecution = this.calculateNextExecution(entry.nextExecution, entry.frequency);
-      await recurringRepository.update(entry.id, {
-        nextExecution,
-        lastExecution: new Date(),
-        hits: { increment: 1 },
-        lastStatus: 'SUCCESS',
-        lastStatusDate: new Date()
-      }, tx);
+      const nextExecution = this.calculateNextExecution(
+        entry.nextExecution,
+        entry.frequency,
+      );
+      await recurringRepository.update(
+        entry.id,
+        {
+          nextExecution,
+          lastExecution: new Date(),
+          hits: { increment: 1 },
+          lastStatus: "SUCCESS",
+          lastStatusDate: new Date(),
+        },
+        tx,
+      );
     });
   }
 }

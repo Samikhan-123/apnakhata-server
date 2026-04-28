@@ -1,5 +1,5 @@
-import prisma from '../../config/prisma.js';
-import { RegisterInput } from './auth.validation.js';
+import prisma from "../../config/prisma.js";
+import { RegisterInput } from "./auth.validation.js";
 
 export class AuthRepository {
   async findByEmail(email: string) {
@@ -8,7 +8,7 @@ export class AuthRepository {
     });
   }
 
-  // find by id 
+  // find by id
   async findById(id: string) {
     return await prisma.user.findUnique({
       where: { id },
@@ -21,40 +21,47 @@ export class AuthRepository {
         role: true,
         lastActive: true,
         createdAt: true,
-      }
+      },
     });
   }
 
-  // create user 
-  async create(data: RegisterInput & { passwordHash: string, verificationToken?: string, verificationExpiry?: Date, role?: 'ADMIN' | 'USER' }) {
+  // create user
+  async create(
+    data: RegisterInput & {
+      passwordHash: string;
+      verificationToken?: string;
+      verificationExpiry?: Date;
+      role?: "ADMIN" | "USER";
+    },
+  ) {
     return await prisma.user.create({
       data: {
         email: data.email,
         name: data.name,
         password: data.passwordHash,
-        baseCurrency: data.baseCurrency || 'PKR',
+        baseCurrency: data.baseCurrency || "PKR",
         verificationToken: data.verificationToken,
         verificationExpiry: data.verificationExpiry,
-        role: data.role || 'USER',
-      }
+        role: data.role || "USER",
+      },
     });
   }
 
-  // update user 
+  // update user
   async update(id: string, data: any) {
     return await prisma.user.update({
       where: { id },
-      data
+      data,
     });
   }
 
-  // find by reset token 
+  // find by reset token
   async findByResetToken(token: string) {
     return await prisma.user.findFirst({
       where: {
         resetToken: token,
-        resetExpiry: { gt: new Date() }
-      }
+        resetExpiry: { gt: new Date() },
+      },
     });
   }
 }

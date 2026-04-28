@@ -1,5 +1,5 @@
-import prisma from '../../config/prisma.js';
-import { CreateBudgetInput, UpdateBudgetInput } from './budget.validation.js';
+import prisma from "../../config/prisma.js";
+import { CreateBudgetInput, UpdateBudgetInput } from "./budget.validation.js";
 
 // class for budget repository
 export class BudgetRepository {
@@ -13,7 +13,12 @@ export class BudgetRepository {
   }
 
   // find unique budget
-  async findUnique(userId: string, categoryId: string, month: number, year: number) {
+  async findUnique(
+    userId: string,
+    categoryId: string,
+    month: number,
+    year: number,
+  ) {
     return await prisma.budget.findUnique({
       where: {
         categoryId_month_year_userId: {

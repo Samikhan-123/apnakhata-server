@@ -1,59 +1,76 @@
-import { UserRole } from '@prisma/client';
-import prisma from '../../config/prisma.js';
-import { generateToken } from '../../utils/auth.js';
-import auditService from './audit.service.js';
+import { UserRole } from "@prisma/client";
+import prisma from "../../config/prisma.js";
+import { generateToken } from "../../utils/auth.js";
+import auditService from "./audit.service.js";
 
 export class AdminService {
   /**
    * Get system-wide statistics
    */
   async getSystemStats() {
-    const [totalUsers, statsByType, totalLogs, activeBudgets, activeRecurring, systemCategories] = await Promise.all([
+    const [
+      totalUsers,
+      statsByType,
+      totalLogs,
+      activeBudgets,
+      activeRecurring,
+      systemCategories,
+    ] = await Promise.all([
       prisma.user.count(),
       (prisma.ledgerEntry as any).groupBy({
-        by: ['type'],
+        by: ["type"],
         _sum: { amount: true },
-        _count: { id: true }
+        _count: { id: true },
       }),
       prisma.adminLog.count(),
       prisma.budget.count(),
       prisma.recurringEntry.count({ where: { isActive: true } }),
-      prisma.category.count({ where: { isSystem: true } })
+      prisma.category.count({ where: { isSystem: true } }),
     ]);
 
-    const incomeStats = statsByType.find((s: any) => s.type === 'INCOME') || { _sum: { amount: 0 }, _count: { id: 0 } };
-    const expenseStats = statsByType.find((s: any) => s.type === 'EXPENSE') || { _sum: { amount: 0 }, _count: { id: 0 } };
+    const incomeStats = statsByType.find((s: any) => s.type === "INCOME") || {
+      _sum: { amount: 0 },
+      _count: { id: 0 },
+    };
+    const expenseStats = statsByType.find((s: any) => s.type === "EXPENSE") || {
+      _sum: { amount: 0 },
+      _count: { id: 0 },
+    };
 
     // Get user growth (last 30 days)
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    
+
     const newUsersLast30Days = await prisma.user.count({
       where: {
-        createdAt: { gte: thirtyDaysAgo }
-      }
+        createdAt: { gte: thirtyDaysAgo },
+      },
     });
 
     // Get User Trends (Last 6 Months)
     const userTrends = [];
     const now = new Date();
-    
+
     for (let i = 5; i >= 0; i--) {
       const monthDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const nextMonthDate = new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
-      
+      const nextMonthDate = new Date(
+        now.getFullYear(),
+        now.getMonth() - i + 1,
+        1,
+      );
+
       const count = await prisma.user.count({
         where: {
           createdAt: {
             gte: monthDate,
-            lt: nextMonthDate
-          }
-        }
+            lt: nextMonthDate,
+          },
+        },
       });
-      
+
       userTrends.push({
-        month: monthDate.toLocaleString('default', { month: 'short' }),
-        count
+        month: monthDate.toLocaleString("default", { month: "short" }),
+        count,
       });
     }
 
@@ -64,20 +81,31 @@ export class AdminService {
       expenseVolume: Number(expenseStats._sum.amount || 0),
       incomeCount: incomeStats._count.id,
       expenseCount: expenseStats._count.id,
-      totalVolume: Number(incomeStats._sum.amount || 0) + Number(expenseStats._sum.amount || 0),
+      totalVolume:
+        Number(incomeStats._sum.amount || 0) +
+        Number(expenseStats._sum.amount || 0),
       newUsersLast30Days,
       userTrends,
       totalLogs,
       activeBudgets,
       activeRecurring,
-      systemCategories
+      systemCategories,
     };
   }
 
   /**
    * Get all users with basic info, pagination, and advanced filtering
    */
-  async getAllUsers(page: number = 1, limit: number = 20, filters: { role?: UserRole, isActive?: boolean, isVerified?: boolean, search?: string } = {}) {
+  async getAllUsers(
+    page: number = 1,
+    limit: number = 20,
+    filters: {
+      role?: UserRole;
+      isActive?: boolean;
+      isVerified?: boolean;
+      search?: string;
+    } = {},
+  ) {
     const skip = (page - 1) * limit;
 
     const where: any = {};
@@ -86,8 +114,8 @@ export class AdminService {
     if (filters.isVerified !== undefined) where.isVerified = filters.isVerified;
     if (filters.search) {
       where.OR = [
-        { email: { contains: filters.search, mode: 'insensitive' } },
-        { name: { contains: filters.search, mode: 'insensitive' } }
+        { email: { contains: filters.search, mode: "insensitive" } },
+        { name: { contains: filters.search, mode: "insensitive" } },
       ];
     }
 
@@ -115,15 +143,15 @@ export class AdminService {
             select: {
               ledgerEntries: true,
               categories: true,
-              budgets: true
-            }
-          }
+              budgets: true,
+            },
+          },
         },
         orderBy: {
-          createdAt: 'desc'
-        }
+          createdAt: "desc",
+        },
       }),
-      prisma.user.count({ where })
+      prisma.user.count({ where }),
     ]);
 
     return {
@@ -132,70 +160,96 @@ export class AdminService {
         total,
         totalPages: Math.ceil(total / limit),
         page,
-        limit
-      }
+        limit,
+      },
     };
   }
 
   /**
    * Update user role, verification status, or account status
    */
-  async updateUser(adminId: string, id: string, data: { role?: UserRole, isVerified?: boolean, isActive?: boolean }) {
+  async updateUser(
+    adminId: string,
+    id: string,
+    data: { role?: UserRole; isVerified?: boolean; isActive?: boolean },
+  ) {
     // 1. Policy Check: Fetch acting admin and target user
     const [actingAdmin, targetUser] = await Promise.all([
-      prisma.user.findUnique({ where: { id: adminId }, select: { role: true } }),
-      prisma.user.findUnique({ where: { id }, select: { role: true, googleId: true } })
+      prisma.user.findUnique({
+        where: { id: adminId },
+        select: { role: true },
+      }),
+      prisma.user.findUnique({
+        where: { id },
+        select: { role: true, googleId: true },
+      }),
     ]);
 
     const isSuperAdmin = actingAdmin?.role === UserRole.ADMIN;
 
     // 2. Admin Protection: No one can modify another ADMIN
     if (targetUser?.role === UserRole.ADMIN && id !== adminId) {
-      throw new Error('Forbidden: Administrative accounts are protected. You cannot modify another Administrator.');
+      throw new Error(
+        "Forbidden: Administrative accounts are protected. You cannot modify another Administrator.",
+      );
     }
 
     // 3. Self-Protection: Admins cannot ban, unverify, or demote themselves
     if (id === adminId) {
       if (data.role || data.isActive === false || data.isVerified === false) {
-        throw new Error('Forbidden: You cannot ban, unverify, or change your own role. Please ask another Administrator if this is required.');
+        throw new Error(
+          "Forbidden: You cannot ban, unverify, or change your own role. Please ask another Administrator if this is required.",
+        );
       }
     }
 
     // 3. Role Change Protection: Only ADMINs can change roles
     if (data.role && !isSuperAdmin) {
-      throw new Error('Forbidden: Moderators are not authorized to change user roles.');
+      throw new Error(
+        "Forbidden: Moderators are not authorized to change user roles.",
+      );
     }
 
     // 3. Status Change Protection: Moderators cannot ban Admins or other Moderators
     if (data.isActive === false && !isSuperAdmin) {
-       if (targetUser?.role === UserRole.ADMIN || (targetUser?.role as any) === 'MODERATOR') {
-          throw new Error('Forbidden: Moderators cannot deactivate other staff members.');
-       }
+      if (
+        targetUser?.role === UserRole.ADMIN ||
+        (targetUser?.role as any) === "MODERATOR"
+      ) {
+        throw new Error(
+          "Forbidden: Moderators cannot deactivate other staff members.",
+        );
+      }
     }
 
     // 4. Verification Check: Google users cannot be unverified
     if (data.isVerified === false && targetUser?.googleId) {
-       throw new Error('Google users are automatically verified and cannot be unverified.');
+      throw new Error(
+        "Google users are automatically verified and cannot be unverified.",
+      );
     }
 
     // 5. Promotion Lockdown: Admins cannot create other Admins via the dashboard
     if ((data.role as any) === UserRole.ADMIN) {
-      throw new Error('Forbidden: Administrative privileges can only be provisioned via direct system access for security integrity.');
+      throw new Error(
+        "Forbidden: Administrative privileges can only be provisioned via direct system access for security integrity.",
+      );
     }
 
     const updatedUser = await prisma.user.update({
       where: { id },
-      data: data as any
+      data: data as any,
     });
 
     // Determine the action for logging
-    let action = 'UPDATE_USER';
-    if (data.isActive === false) action = 'BAN_USER';
-    else if (data.isActive === true) action = 'REACTIVATE_USER';
-    else if (data.role === UserRole.ADMIN) action = 'PROMOTE_ADMIN';
-    else if ((data.role as any) === 'MODERATOR') action = 'PROMOTE_MODERATOR';
-    else if (data.role === UserRole.USER) action = 'DEMOTE_USER';
-    else if (data.isVerified !== undefined) action = data.isVerified ? 'VERIFY_USER' : 'UNVERIFY_USER';
+    let action = "UPDATE_USER";
+    if (data.isActive === false) action = "BAN_USER";
+    else if (data.isActive === true) action = "REACTIVATE_USER";
+    else if (data.role === UserRole.ADMIN) action = "PROMOTE_ADMIN";
+    else if ((data.role as any) === "MODERATOR") action = "PROMOTE_MODERATOR";
+    else if (data.role === UserRole.USER) action = "DEMOTE_USER";
+    else if (data.isVerified !== undefined)
+      action = data.isVerified ? "VERIFY_USER" : "UNVERIFY_USER";
 
     await auditService.log(adminId, action, id, data);
 
@@ -205,21 +259,32 @@ export class AdminService {
   /**
    * Batch update multiple users
    */
-  async batchUpdateUsers(adminId: string, ids: string[], data: { role?: UserRole, isVerified?: boolean, isActive?: boolean }) {
-    if (!ids || ids.length === 0) throw new Error('No user IDs provided');
+  async batchUpdateUsers(
+    adminId: string,
+    ids: string[],
+    data: { role?: UserRole; isVerified?: boolean; isActive?: boolean },
+  ) {
+    if (!ids || ids.length === 0) throw new Error("No user IDs provided");
 
     // 1. Policy Check: Fetch acting admin
-    const actingAdmin = await prisma.user.findUnique({ where: { id: adminId }, select: { role: true } });
+    const actingAdmin = await prisma.user.findUnique({
+      where: { id: adminId },
+      select: { role: true },
+    });
     const isSuperAdmin = actingAdmin?.role === UserRole.ADMIN;
 
     // 2. Role Change Protection: Batch role changes are ADMIN only
     if (data.role && !isSuperAdmin) {
-      throw new Error('Forbidden: Batch role modifications are restricted to full Administrators.');
+      throw new Error(
+        "Forbidden: Batch role modifications are restricted to full Administrators.",
+      );
     }
 
     // 2b. Promotion Lockdown: Admins cannot create other Admins via the dashboard
     if ((data.role as any) === UserRole.ADMIN) {
-      throw new Error('Forbidden: Batch promotion to Administrator is strictly prohibited via the dashboard.');
+      throw new Error(
+        "Forbidden: Batch promotion to Administrator is strictly prohibited via the dashboard.",
+      );
     }
 
     // 3. Admin Protection: Batch updates cannot include other ADMINs
@@ -227,15 +292,19 @@ export class AdminService {
       where: {
         id: { in: ids },
         role: UserRole.ADMIN,
-        NOT: { id: adminId } // Exclude self if they somehow selected themselves
-      }
+        NOT: { id: adminId }, // Exclude self if they somehow selected themselves
+      },
     });
     if (adminTargets > 0) {
-      throw new Error(`Forbidden: You cannot perform batch actions on ${adminTargets} other Administrators.`);
+      throw new Error(
+        `Forbidden: You cannot perform batch actions on ${adminTargets} other Administrators.`,
+      );
     }
 
     if (ids.includes(adminId)) {
-      throw new Error('Forbidden: You cannot include yourself in a batch administrative action.');
+      throw new Error(
+        "Forbidden: You cannot include yourself in a batch administrative action.",
+      );
     }
 
     // 4. Protection: Moderators cannot batch-deactivate/ban anyone if the list contains staff
@@ -243,11 +312,13 @@ export class AdminService {
       const moderatorCount = await prisma.user.count({
         where: {
           id: { in: ids },
-          role: 'MODERATOR' as any
-        }
+          role: "MODERATOR" as any,
+        },
       });
       if (moderatorCount > 0) {
-        throw new Error(`Forbidden: You cannot deactivate ${moderatorCount} staff members in this batch.`);
+        throw new Error(
+          `Forbidden: You cannot deactivate ${moderatorCount} staff members in this batch.`,
+        );
       }
     }
 
@@ -256,27 +327,33 @@ export class AdminService {
       const googleUsers = await prisma.user.count({
         where: {
           id: { in: ids },
-          googleId: { not: null }
-        }
+          googleId: { not: null },
+        },
       });
       if (googleUsers > 0) {
-        throw new Error(`Cannot unverify ${googleUsers} Google-authenticated accounts in this batch.`);
+        throw new Error(
+          `Cannot unverify ${googleUsers} Google-authenticated accounts in this batch.`,
+        );
       }
     }
 
     const result = await prisma.user.updateMany({
       where: { id: { in: ids } },
-      data
+      data,
     });
 
     // Determine the action for logging
-    let action = 'BATCH_UPDATE_USERS';
-    if (data.isActive === false) action = 'BATCH_BAN_USERS';
-    else if (data.isActive === true) action = 'BATCH_REACTIVATE_USERS';
-    else if (data.role) action = 'BATCH_ROLE_CHANGE';
-    else if (data.isVerified !== undefined) action = 'BATCH_VERIFY_USERS';
+    let action = "BATCH_UPDATE_USERS";
+    if (data.isActive === false) action = "BATCH_BAN_USERS";
+    else if (data.isActive === true) action = "BATCH_REACTIVATE_USERS";
+    else if (data.role) action = "BATCH_ROLE_CHANGE";
+    else if (data.isVerified !== undefined) action = "BATCH_VERIFY_USERS";
 
-    await auditService.log(adminId, action, undefined, { count: result.count, data, targetedIds: ids });
+    await auditService.log(adminId, action, undefined, {
+      count: result.count,
+      data,
+      targetedIds: ids,
+    });
 
     return result;
   }
@@ -293,14 +370,14 @@ export class AdminService {
             ledgerEntries: true,
             categories: true,
             budgets: true,
-            recurringEntries: true
-          }
-        }
-      }
+            recurringEntries: true,
+          },
+        },
+      },
     });
 
     if (!user) {
-      throw new Error('User not found');
+      throw new Error("User not found");
     }
 
     // Calculate Risk Profile
@@ -308,7 +385,7 @@ export class AdminService {
 
     return {
       ...user,
-      riskProfile
+      riskProfile,
     };
   }
 
@@ -317,85 +394,140 @@ export class AdminService {
    */
   private calculateRiskProfile(user: any) {
     let score = 100;
-    const signals: { type: 'TRUST' | 'RISK' | 'INFO', message: string, impact: number }[] = [];
+    const signals: {
+      type: "TRUST" | "RISK" | "INFO";
+      message: string;
+      impact: number;
+    }[] = [];
 
     // 1. Identity Verification
     if (!user.isVerified) {
       const impact = -20;
       score += impact;
-      signals.push({ type: 'RISK', message: 'Identity not verified via email', impact });
+      signals.push({
+        type: "RISK",
+        message: "Identity not verified via email",
+        impact,
+      });
     } else {
-      signals.push({ type: 'TRUST', message: 'Email identity verified', impact: 0 });
+      signals.push({
+        type: "TRUST",
+        message: "Email identity verified",
+        impact: 0,
+      });
     }
 
     // 2. Authentication Method
     if (user.googleId) {
       const impact = 15;
       score += impact;
-      signals.push({ type: 'TRUST', message: 'Verified Google OAuth entry point', impact });
+      signals.push({
+        type: "TRUST",
+        message: "Verified Google OAuth entry point",
+        impact,
+      });
     }
 
     // 3. Network Reputation & Identity Visibility
     const metadata = user.metadata || {};
-    const hostname = metadata.hostname?.toLowerCase() || '';
+    const hostname = metadata.hostname?.toLowerCase() || "";
     const isLookupSuccessful = metadata.isLookupSuccessful;
-    
+
     // Penalize if the lookup was blocked or failed (Common with VPNs/Proxies)
     if (isLookupSuccessful === false) {
       const impact = -15;
       score += impact;
-      signals.push({ type: 'RISK', message: 'Identity obfuscation or tracking block detected', impact });
+      signals.push({
+        type: "RISK",
+        message: "Identity obfuscation or tracking block detected",
+        impact,
+      });
     }
 
     // Expand risky providers list
     const riskyProviders = [
-      'ovh', 'digitalocean', 'aws', 'amazon', 'googlecloud', 'azure', 'vultr', 'linode', 
-      'proxy', 'vpn', 'tor-exit', 'mullvad', 'nordvpn', 'surfshark', 'expressvpn', 
-      'host', 'data-center', 'cloud', 'hosting'
+      "ovh",
+      "digitalocean",
+      "aws",
+      "amazon",
+      "googlecloud",
+      "azure",
+      "vultr",
+      "linode",
+      "proxy",
+      "vpn",
+      "tor-exit",
+      "mullvad",
+      "nordvpn",
+      "surfshark",
+      "expressvpn",
+      "host",
+      "data-center",
+      "cloud",
+      "hosting",
     ];
-    const isRiskyHost = riskyProviders.some(p => hostname.includes(p));
+    const isRiskyHost = riskyProviders.some((p) => hostname.includes(p));
 
     if (isRiskyHost) {
-       const impact = -30;
-       score += impact;
-       signals.push({ type: 'RISK', message: 'Data Center / VPN connection detected', impact });
+      const impact = -30;
+      score += impact;
+      signals.push({
+        type: "RISK",
+        message: "Data Center / VPN connection detected",
+        impact,
+      });
     } else if (hostname) {
-       signals.push({ type: 'INFO', message: `Residential/ISP connection: ${hostname.split('.').slice(-2).join('.')}`, impact: 0 });
+      signals.push({
+        type: "INFO",
+        message: `Residential/ISP connection: ${hostname.split(".").slice(-2).join(".")}`,
+        impact: 0,
+      });
     } else if (isLookupSuccessful !== false) {
-       // Lookup succeeded but hostname is still missing - slightly suspicious
-       const impact = -5;
-       score += impact;
-       signals.push({ type: 'INFO', message: 'Limited network metadata available', impact });
+      // Lookup succeeded but hostname is still missing - slightly suspicious
+      const impact = -5;
+      score += impact;
+      signals.push({
+        type: "INFO",
+        message: "Limited network metadata available",
+        impact,
+      });
     }
 
     // 4. Activity Volume
     const entriesCount = user._count?.ledgerEntries || 0;
     if (entriesCount > 500 && !user.isVerified) {
-       const impact = -20;
-       score += impact;
-       signals.push({ type: 'RISK', message: 'High activity volume from unverified account', impact });
+      const impact = -20;
+      score += impact;
+      signals.push({
+        type: "RISK",
+        message: "High activity volume from unverified account",
+        impact,
+      });
     }
 
     // Normalize score between 0 and 100
     score = Math.max(0, Math.min(100, score));
 
     // Determine Level and Recommendation
-    let level: 'LOW' | 'MEDIUM' | 'HIGH' = 'LOW';
-    let recommendation = 'Safe: No immediate administrative action required. Standard monitoring active.';
+    let level: "LOW" | "MEDIUM" | "HIGH" = "LOW";
+    let recommendation =
+      "Safe: No immediate administrative action required. Standard monitoring active.";
 
     if (score < 40) {
-      level = 'HIGH';
-      recommendation = 'Critical: High risk signals detected. Review recent activity immediately and consider a temporary ban while investigating.';
+      level = "HIGH";
+      recommendation =
+        "Critical: High risk signals detected. Review recent activity immediately and consider a temporary ban while investigating.";
     } else if (score < 75) {
-      level = 'MEDIUM';
-      recommendation = 'Watchlist: Suspicious metadata detected (VPN or Unverified status). Monitor for impossible travel or multi-account abuse.';
+      level = "MEDIUM";
+      recommendation =
+        "Watchlist: Suspicious metadata detected (VPN or Unverified status). Monitor for impossible travel or multi-account abuse.";
     }
 
     return {
       score,
       level,
       recommendation,
-      signals
+      signals,
     };
   }
 
@@ -411,59 +543,68 @@ export class AdminService {
 
     // 1. Get Daily Volume Trends (Last 30 Days) - Group by Date and Type
     const dailyStats = await (prisma.ledgerEntry as any).groupBy({
-      by: ['date', 'type'],
+      by: ["date", "type"],
       where: {
-        date: { gte: thirtyDaysAgo }
+        date: { gte: thirtyDaysAgo },
       },
       _sum: { amount: true },
       _count: { id: true },
-      orderBy: { date: 'asc' }
+      orderBy: { date: "asc" },
     });
 
     // Map into daily objects with income/expense buckets
-    const trendsMap: Record<string, { date: string, income: number, expense: number, count: number }> = {};
-    
+    const trendsMap: Record<
+      string,
+      { date: string; income: number; expense: number; count: number }
+    > = {};
+
     dailyStats.forEach((stat: any) => {
-      const d = stat.date.toISOString().split('T')[0];
+      const d = stat.date.toISOString().split("T")[0];
       if (!trendsMap[d]) {
         trendsMap[d] = { date: d, income: 0, expense: 0, count: 0 };
       }
-      if (stat.type === 'INCOME') trendsMap[d].income = Number(stat._sum.amount || 0);
-      else if (stat.type === 'EXPENSE') trendsMap[d].expense = Number(stat._sum.amount || 0);
+      if (stat.type === "INCOME")
+        trendsMap[d].income = Number(stat._sum.amount || 0);
+      else if (stat.type === "EXPENSE")
+        trendsMap[d].expense = Number(stat._sum.amount || 0);
       trendsMap[d].count += stat._count.id;
     });
 
-    const volumeTrends = Object.values(trendsMap).sort((a,b) => a.date.localeCompare(b.date));
+    const volumeTrends = Object.values(trendsMap).sort((a, b) =>
+      a.date.localeCompare(b.date),
+    );
 
     // 2. Category Breakdown (Platform Wide) - Aggregated by Category Name for True Market View
     const rawCategoryDistribution = await (prisma.ledgerEntry as any).groupBy({
-      by: ['categoryId', 'type'],
+      by: ["categoryId", "type"],
       _sum: { amount: true },
-      _count: { id: true }
+      _count: { id: true },
     });
 
-    const categoryIds = rawCategoryDistribution.map((c: any) => c.categoryId).filter(Boolean) as string[];
+    const categoryIds = rawCategoryDistribution
+      .map((c: any) => c.categoryId)
+      .filter(Boolean) as string[];
     const categories = await prisma.category.findMany({
       where: { id: { in: categoryIds } },
-      select: { id: true, name: true, icon: true }
+      select: { id: true, name: true, icon: true },
     });
 
     // 2.1 Consolidated aggregation by Name (Best Practice for Platform-Wide Analytics)
     const consolidatedMap: Record<string, any> = {};
 
     rawCategoryDistribution.forEach((stat: any) => {
-      const cat = categories.find(c => c.id === stat.categoryId);
-      const name = cat?.name || 'Uncategorized';
+      const cat = categories.find((c) => c.id === stat.categoryId);
+      const name = cat?.name || "Uncategorized";
       const type = stat.type;
       const key = `${name}_${type}`;
 
       if (!consolidatedMap[key]) {
         consolidatedMap[key] = {
           name,
-          icon: cat?.icon || 'Package',
+          icon: cat?.icon || "Package",
           value: 0,
           count: 0,
-          type
+          type,
         };
       }
       consolidatedMap[key].value += Number(stat._sum.amount || 0);
@@ -476,90 +617,102 @@ export class AdminService {
 
     // 3. Currency Distribution (User Preferences)
     const currencyDistribution = await (prisma.user as any).groupBy({
-      by: ['baseCurrency'],
+      by: ["baseCurrency"],
       _count: { id: true },
       orderBy: {
-        _count: { id: 'desc' }
-      }
+        _count: { id: "desc" },
+      },
     });
 
     const currencies = currencyDistribution.map((stat: any) => ({
       currency: stat.baseCurrency,
-      userCount: stat._count.id
+      userCount: stat._count.id,
     }));
 
     // 4. Platform Activity (Signups & DAU) - Last 7 Days with 0-padding
-    const activitySummaryMap: Record<string, { signups: number, activeUsers: number }> = {};
+    const activitySummaryMap: Record<
+      string,
+      { signups: number; activeUsers: number }
+    > = {};
     const sevenDaysAgoForActivity = new Date();
     sevenDaysAgoForActivity.setDate(sevenDaysAgoForActivity.getDate() - 7);
-    
+
     for (let i = 6; i >= 0; i--) {
       const d = new Date();
       d.setDate(d.getDate() - i);
-      activitySummaryMap[d.toISOString().split('T')[0]] = { signups: 0, activeUsers: 0 };
+      activitySummaryMap[d.toISOString().split("T")[0]] = {
+        signups: 0,
+        activeUsers: 0,
+      };
     }
 
     // Signups
     const dailySignups = await (prisma.user as any).groupBy({
-      by: ['createdAt'],
+      by: ["createdAt"],
       where: { createdAt: { gte: sevenDaysAgoForActivity } },
-      _count: { id: true }
+      _count: { id: true },
     });
     dailySignups.forEach((s: any) => {
-      const d = s.createdAt.toISOString().split('T')[0];
+      const d = s.createdAt.toISOString().split("T")[0];
       if (activitySummaryMap[d]) activitySummaryMap[d].signups = s._count.id;
     });
 
     // DAU (Daily Active Users based on session activity/ledger entries)
     const dauStats = await (prisma.ledgerEntry as any).groupBy({
-      by: ['date', 'userId'],
-      where: { date: { gte: sevenDaysAgoForActivity } }
+      by: ["date", "userId"],
+      where: { date: { gte: sevenDaysAgoForActivity } },
     });
     const dailyUniqueUsers: Record<string, Set<string>> = {};
     dauStats.forEach((s: any) => {
-      const d = s.date.toISOString().split('T')[0];
+      const d = s.date.toISOString().split("T")[0];
       if (!dailyUniqueUsers[d]) dailyUniqueUsers[d] = new Set();
       dailyUniqueUsers[d].add(s.userId);
     });
     Object.entries(dailyUniqueUsers).forEach(([date, users]) => {
-      if (activitySummaryMap[date]) activitySummaryMap[date].activeUsers = users.size;
+      if (activitySummaryMap[date])
+        activitySummaryMap[date].activeUsers = users.size;
     });
 
-    const activityTrends = Object.entries(activitySummaryMap).map(([date, data]) => ({
-      date: new Date(date).toLocaleDateString('default', { month: 'short', day: 'numeric' }),
-      signups: data.signups,
-      activeUsers: data.activeUsers
-    }));
+    const activityTrends = Object.entries(activitySummaryMap).map(
+      ([date, data]) => ({
+        date: new Date(date).toLocaleDateString("default", {
+          month: "short",
+          day: "numeric",
+        }),
+        signups: data.signups,
+        activeUsers: data.activeUsers,
+      }),
+    );
 
     // 5. Top Active Users (Most transactions in last 30 days)
     const topUsers = await (prisma.ledgerEntry as any).groupBy({
-      by: ['userId'],
+      by: ["userId"],
       _count: { id: true },
       where: { date: { gte: thirtyDaysAgo } },
-      orderBy: { _count: { id: 'desc' } },
-      take: 5
+      orderBy: { _count: { id: "desc" } },
+      take: 5,
     });
 
     const topUserIds = topUsers.map((u: any) => u.userId);
     const topUsersDetails = await prisma.user.findMany({
-       where: { id: { in: topUserIds } },
-       select: { id: true, name: true, email: true, image: true }
+      where: { id: { in: topUserIds } },
+      select: { id: true, name: true, email: true, image: true },
     });
 
     const topActiveUsers = topUsers.map((u: any) => {
-       const details = topUsersDetails.find(d => d.id === u.userId);
-       return {
-          ...details,
-          activityCount: u._count.id
-       };
+      const details = topUsersDetails.find((d) => d.id === u.userId);
+      return {
+        ...details,
+        activityCount: u._count.id,
+      };
     });
 
     // 6. Real-time Platform Presence (DAU based on lastActive)
     const twentyFourHoursAgo = new Date();
     twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - 24);
-    
+
     const activeUsersLast24h = await prisma.user.count({
-      where: { lastActive: { gte: twentyFourHoursAgo } }
+      where: { lastActive: { gte: twentyFourHoursAgo } },
     });
 
     return {
@@ -572,11 +725,24 @@ export class AdminService {
       summary: {
         totalIncome: volumeTrends.reduce((acc, curr) => acc + curr.income, 0),
         totalExpense: volumeTrends.reduce((acc, curr) => acc + curr.expense, 0),
-        avgTransaction: dailyStats.length > 0 
-          ? Number(dailyStats.reduce((acc: any, s: any) => acc + Number(s._sum.amount), 0) / dailyStats.reduce((acc: any, s: any) => acc + s._count.id, 0))
-          : 0,
-        peakVolumeDate: dailyStats.reduce((prev: any, current: any) => (Number(prev?._sum?.amount || 0) > Number(current._sum?.amount || 0)) ? prev : current, dailyStats[0])?.date
-      }
+        avgTransaction:
+          dailyStats.length > 0
+            ? Number(
+                dailyStats.reduce(
+                  (acc: any, s: any) => acc + Number(s._sum.amount),
+                  0,
+                ) /
+                  dailyStats.reduce((acc: any, s: any) => acc + s._count.id, 0),
+              )
+            : 0,
+        peakVolumeDate: dailyStats.reduce(
+          (prev: any, current: any) =>
+            Number(prev?._sum?.amount || 0) > Number(current._sum?.amount || 0)
+              ? prev
+              : current,
+          dailyStats[0],
+        )?.date,
+      },
     };
   }
 
@@ -584,19 +750,31 @@ export class AdminService {
    * Schedule a user for deletion (30 days grace period)
    */
   async scheduleUserDeletion(adminId: string, id: string) {
-    const actingAdmin = await prisma.user.findUnique({ where: { id: adminId }, select: { role: true } });
-    const targetUser = await prisma.user.findUnique({ where: { id }, select: { role: true } });
+    const actingAdmin = await prisma.user.findUnique({
+      where: { id: adminId },
+      select: { role: true },
+    });
+    const targetUser = await prisma.user.findUnique({
+      where: { id },
+      select: { role: true },
+    });
 
     if (actingAdmin?.role !== UserRole.ADMIN) {
-      throw new Error('Forbidden: Only full Administrators can schedule account deletions.');
+      throw new Error(
+        "Forbidden: Only full Administrators can schedule account deletions.",
+      );
     }
 
     if (targetUser?.role === UserRole.ADMIN && id !== adminId) {
-       throw new Error('Forbidden: Administrative accounts are protected. You cannot delete another Administrator.');
+      throw new Error(
+        "Forbidden: Administrative accounts are protected. You cannot delete another Administrator.",
+      );
     }
 
     if (id === adminId) {
-      throw new Error('Forbidden: You cannot schedule your own account for deletion. This protection prevents accidental system lockout.');
+      throw new Error(
+        "Forbidden: You cannot schedule your own account for deletion. This protection prevents accidental system lockout.",
+      );
     }
 
     const deletionDate = new Date();
@@ -607,11 +785,11 @@ export class AdminService {
       data: {
         isActive: false,
         deletionScheduledAt: deletionDate,
-        deletionRequestedBy: UserRole.ADMIN
-      }
+        deletionRequestedBy: UserRole.ADMIN,
+      },
     });
 
-    await auditService.log(adminId, 'SCHEDULE_DELETION', id, { deletionDate });
+    await auditService.log(adminId, "SCHEDULE_DELETION", id, { deletionDate });
 
     return updatedUser;
   }
@@ -620,10 +798,15 @@ export class AdminService {
    * Cancel a scheduled account deletion
    */
   async cancelUserDeletion(adminId: string, id: string) {
-    const actingAdmin = await prisma.user.findUnique({ where: { id: adminId }, select: { role: true } });
-    
+    const actingAdmin = await prisma.user.findUnique({
+      where: { id: adminId },
+      select: { role: true },
+    });
+
     if (actingAdmin?.role !== UserRole.ADMIN) {
-      throw new Error('Forbidden: Only full Administrators can cancel account deletions.');
+      throw new Error(
+        "Forbidden: Only full Administrators can cancel account deletions.",
+      );
     }
 
     const updatedUser = await prisma.user.update({
@@ -631,11 +814,11 @@ export class AdminService {
       data: {
         isActive: true,
         deletionScheduledAt: null,
-        deletionRequestedBy: null
-      }
+        deletionRequestedBy: null,
+      },
     });
 
-    await auditService.log(adminId, 'CANCEL_DELETION', id);
+    await auditService.log(adminId, "CANCEL_DELETION", id);
 
     return updatedUser;
   }
@@ -652,10 +835,10 @@ export class AdminService {
     const accountsToPurge = await prisma.user.findMany({
       where: {
         deletionScheduledAt: {
-          lt: now
-        }
+          lt: now,
+        },
       },
-      select: { id: true, email: true }
+      select: { id: true, email: true },
     });
 
     if (accountsToPurge.length > 0) {
@@ -673,9 +856,9 @@ export class AdminService {
     const deletedLogs = await prisma.adminLog.deleteMany({
       where: {
         createdAt: {
-          lt: ninetyDaysAgo
-        }
-      }
+          lt: ninetyDaysAgo,
+        },
+      },
     });
     results.logsPurged = deletedLogs.count;
 
@@ -687,28 +870,41 @@ export class AdminService {
    */
   async impersonateUser(adminId: string, targetUserId: string) {
     // 1. Policy Check: Only full Administrators can impersonate
-    const actingAdmin = await prisma.user.findUnique({ where: { id: adminId }, select: { role: true } });
+    const actingAdmin = await prisma.user.findUnique({
+      where: { id: adminId },
+      select: { role: true },
+    });
     if (actingAdmin?.role !== UserRole.ADMIN) {
-      throw new Error('Forbidden: Impersonation privileges are restricted to platform Administrators.');
+      throw new Error(
+        "Forbidden: Impersonation privileges are restricted to platform Administrators.",
+      );
     }
 
     // 2. Target Check: Admins cannot impersonate themselves or other Admins
-    const targetUser = await prisma.user.findUnique({ where: { id: targetUserId }, select: { id: true, role: true, name: true, email: true } });
-    if (!targetUser) throw new Error('Target user not found');
+    const targetUser = await prisma.user.findUnique({
+      where: { id: targetUserId },
+      select: { id: true, role: true, name: true, email: true },
+    });
+    if (!targetUser) throw new Error("Target user not found");
 
     if (targetUser.role === UserRole.ADMIN) {
-      throw new Error('Forbidden: Security protocols prohibit impersonating other Administrative accounts.');
+      throw new Error(
+        "Forbidden: Security protocols prohibit impersonating other Administrative accounts.",
+      );
     }
 
     // 3. Generate Impersonation Token
     // We add 'impersonatorId' which the client will use to show the Read-Only banner
-    const token = generateToken(targetUser.id, { 
+    const token = generateToken(targetUser.id, {
       impersonatorId: adminId,
-      isReadOnly: true 
+      isReadOnly: true,
     });
 
     // 4. Audit Trail
-    await auditService.log(adminId, 'START_IMPERSONATION', targetUserId, { targetName: targetUser.name, targetEmail: targetUser.email });
+    await auditService.log(adminId, "START_IMPERSONATION", targetUserId, {
+      targetName: targetUser.name,
+      targetEmail: targetUser.email,
+    });
 
     return {
       token,
@@ -716,8 +912,8 @@ export class AdminService {
         id: targetUser.id,
         name: targetUser.name,
         email: targetUser.email,
-        role: targetUser.role
-      }
+        role: targetUser.role,
+      },
     };
   }
 
@@ -726,23 +922,25 @@ export class AdminService {
    */
   async stopImpersonation(impersonatorId: string) {
     if (!impersonatorId) {
-      throw new Error('No active impersonation session found to stop.');
+      throw new Error("No active impersonation session found to stop.");
     }
 
-    const admin = await prisma.user.findUnique({ 
+    const admin = await prisma.user.findUnique({
       where: { id: impersonatorId },
-      select: { id: true, role: true, name: true, email: true }
+      select: { id: true, role: true, name: true, email: true },
     });
 
     if (!admin || admin.role !== UserRole.ADMIN) {
-      throw new Error('Forbidden: Original session context is invalid or lacks administrative privileges.');
+      throw new Error(
+        "Forbidden: Original session context is invalid or lacks administrative privileges.",
+      );
     }
 
     // Generate fresh token for the Admin
     const token = generateToken(admin.id);
 
     // Audit Trail
-    await auditService.log(admin.id, 'STOP_IMPERSONATION');
+    await auditService.log(admin.id, "STOP_IMPERSONATION");
 
     return {
       token,
@@ -750,8 +948,8 @@ export class AdminService {
         id: admin.id,
         name: admin.name,
         email: admin.email,
-        role: admin.role
-      }
+        role: admin.role,
+      },
     };
   }
 }

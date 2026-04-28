@@ -1,8 +1,8 @@
-import { Router } from 'express';
-import supportController from './support.controller.js';
-import { authenticate } from '../../middlewares/auth.middleware.js';
-import rateLimit from 'express-rate-limit';
-import { maintenanceGuard } from '../../middlewares/maintenance.middleware.js';
+import { Router } from "express";
+import supportController from "./support.controller.js";
+import { authenticate } from "../../middlewares/auth.middleware.js";
+import rateLimit from "express-rate-limit";
+import { maintenanceGuard } from "../../middlewares/maintenance.middleware.js";
 
 const router = Router();
 
@@ -12,7 +12,7 @@ const supportLimiter = rateLimit({
   max: 5, // Limit each IP to 5 requests per window
   message: {
     success: false,
-    message: 'Too many requests from this IP. Please try again after an hour.'
+    message: "Too many requests from this IP. Please try again after an hour.",
   },
   standardHeaders: true,
   legacyHeaders: false,
@@ -25,11 +25,11 @@ const supportLimiter = rateLimit({
  * @access  Public (Optionally Authenticated)
  */
 router.post(
-  '/contact',
+  "/contact",
   supportLimiter,
   authenticate,
   maintenanceGuard,
-  supportController.contact
+  supportController.contact,
 );
 
 export default router;

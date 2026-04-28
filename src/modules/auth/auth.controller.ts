@@ -1,42 +1,48 @@
-import { Request, Response, NextFunction } from 'express';
-import authService from './auth.service.js';
-import { getClientIp } from '../../utils/location.util.js';
-import { 
-  registerSchema, 
-  loginSchema, 
-  otpSchema, 
-  emailSchema, 
+import { Request, Response, NextFunction } from "express";
+import authService from "./auth.service.js";
+import { getClientIp } from "../../utils/location.util.js";
+import {
+  registerSchema,
+  loginSchema,
+  otpSchema,
+  emailSchema,
   resetPasswordSchema,
-  preferencesSchema
-} from './auth.validation.js';
-import { AppError } from '../../middlewares/error.middleware.js';
+  preferencesSchema,
+} from "./auth.validation.js";
+import { AppError } from "../../middlewares/error.middleware.js";
 
-const isProduction = process.env.NODE_ENV === 'production' || !!process.env.VERCEL;
+const isProduction =
+  process.env.NODE_ENV === "production" || !!process.env.VERCEL;
 
 export const COOKIE_OPTIONS = {
   httpOnly: true,
   secure: isProduction,
-  sameSite: (isProduction ? 'none' : 'lax') as 'none' | 'lax',
+  sameSite: (isProduction ? "none" : "lax") as "none" | "lax",
   maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
-  path: '/',
+  path: "/",
 };
 
 export class AuthController {
   /**
-   * Register a new user 
+   * Register a new user
    */
   async register(req: Request, res: Response, next: NextFunction) {
     try {
       const validatedData = registerSchema.parse(req.body);
       const ip = getClientIp(req);
-      const userAgent = req.headers['user-agent'] || 'unknown';
-      const { user, token } = await authService.register(validatedData, ip, userAgent);
+      const userAgent = req.headers["user-agent"] || "unknown";
+      const { user, token } = await authService.register(
+        validatedData,
+        ip,
+        userAgent,
+      );
 
-      res.cookie('token', token, COOKIE_OPTIONS);
+      res.cookie("token", token, COOKIE_OPTIONS);
       res.status(201).json({
         success: true,
-        message: 'Account created! Please check your email for the verification code.',
-        user
+        message:
+          "Account created! Please check your email for the verification code.",
+        user,
       });
     } catch (error) {
       next(error);
@@ -50,14 +56,18 @@ export class AuthController {
     try {
       const validatedData = loginSchema.parse(req.body);
       const ip = getClientIp(req);
-      const userAgent = req.headers['user-agent'] || 'unknown';
-      const { user, token } = await authService.login({ ...validatedData, ip, userAgent });
+      const userAgent = req.headers["user-agent"] || "unknown";
+      const { user, token } = await authService.login({
+        ...validatedData,
+        ip,
+        userAgent,
+      });
 
-      res.cookie('token', token, COOKIE_OPTIONS);
+      res.cookie("token", token, COOKIE_OPTIONS);
       res.status(200).json({
         success: true,
-        message: 'Welcome back!',
-        user
+        message: "Welcome back!",
+        user,
       });
     } catch (error) {
       next(error);
@@ -71,17 +81,21 @@ export class AuthController {
     try {
       const { idToken } = req.body;
       if (!idToken) {
-        throw new AppError('ID Token is required', 400);
+        throw new AppError("ID Token is required", 400);
       }
       const ip = getClientIp(req);
-      const userAgent = req.headers['user-agent'] || 'unknown';
-      const { user, token } = await authService.googleLogin(idToken, ip, userAgent);
+      const userAgent = req.headers["user-agent"] || "unknown";
+      const { user, token } = await authService.googleLogin(
+        idToken,
+        ip,
+        userAgent,
+      );
 
-      res.cookie('token', token, COOKIE_OPTIONS);
+      res.cookie("token", token, COOKIE_OPTIONS);
       res.status(200).json({
         success: true,
-        message: 'Google login successful!',
-        user
+        message: "Google login successful!",
+        user,
       });
     } catch (error) {
       next(error);
@@ -92,13 +106,13 @@ export class AuthController {
    * Logout user
    */
   async logout(req: Request, res: Response) {
-    res.clearCookie('token', {
+    res.clearCookie("token", {
       ...COOKIE_OPTIONS,
-      maxAge: 0
+      maxAge: 0,
     });
     res.status(200).json({
       success: true,
-      message: 'Logged out successfully'
+      message: "Logged out successfully",
     });
   }
 
@@ -163,7 +177,7 @@ export class AuthController {
         success: true,
         user: req.user,
         impersonatorId: req.impersonatorId,
-        isReadOnly: req.isReadOnly
+        isReadOnly: req.isReadOnly,
       });
     } catch (error) {
       next(error);
@@ -177,13 +191,16 @@ export class AuthController {
     try {
       const validatedData = preferencesSchema.parse(req.body);
       const userId = req.user.id;
-      const updatedUser = await authService.updatePreferences(userId, validatedData);
-      
+      const updatedUser = await authService.updatePreferences(
+        userId,
+        validatedData,
+      );
+
       // Update the user session/cookie if needed
       // Since it's generic, we return the updated basic profile
       res.status(200).json({
         success: true,
-        message: 'Preferences updated successfully',
+        message: "Preferences updated successfully",
         user: {
           id: updatedUser.id,
           email: updatedUser.email,
@@ -191,8 +208,8 @@ export class AuthController {
           baseCurrency: updatedUser.baseCurrency,
           isVerified: updatedUser.isVerified,
           role: (updatedUser as any).role,
-          createdAt: updatedUser.createdAt
-        }
+          createdAt: updatedUser.createdAt,
+        },
       });
     } catch (error) {
       next(error);
@@ -206,17 +223,18 @@ export class AuthController {
     try {
       const userId = req.user.id;
       const user = await authService.requestSelfDeletion(userId);
-      
+
       // Clear cookie immediately as they are now "deactivated"
-      res.clearCookie('token', {
+      res.clearCookie("token", {
         ...COOKIE_OPTIONS,
-        maxAge: 0
+        maxAge: 0,
       });
 
       res.status(200).json({
         success: true,
         data: user,
-        message: 'Your account has been scheduled for deletion. You have 30 days to contact support if you change your mind.'
+        message:
+          "Your account has been scheduled for deletion. You have 30 days to contact support if you change your mind.",
       });
     } catch (error) {
       next(error);

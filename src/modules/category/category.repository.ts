@@ -1,5 +1,8 @@
-import prisma from '../../config/prisma.js';
-import { CreateCategoryInput, UpdateCategoryInput } from './category.validation.js';
+import prisma from "../../config/prisma.js";
+import {
+  CreateCategoryInput,
+  UpdateCategoryInput,
+} from "./category.validation.js";
 
 // class for category repository
 export class CategoryRepository {
@@ -7,12 +10,9 @@ export class CategoryRepository {
   async findAll(userId: string) {
     return await prisma.category.findMany({
       where: {
-        OR: [
-          { userId },
-          { userId: null }
-        ]
+        OR: [{ userId }, { userId: null }],
       },
-      orderBy: { name: 'asc' },
+      orderBy: { name: "asc" },
     });
   }
 
@@ -30,14 +30,17 @@ export class CategoryRepository {
         id,
         OR: [
           { userId },
-          { userId: null } // Allow access to global categories
-        ]
+          { userId: null }, // Allow access to global categories
+        ],
       },
     });
   }
 
   // create category
-  async create(userId: string, data: CreateCategoryInput & { isSystem?: boolean }) {
+  async create(
+    userId: string,
+    data: CreateCategoryInput & { isSystem?: boolean },
+  ) {
     return await prisma.category.create({
       data: {
         name: data.name.toLowerCase(),
