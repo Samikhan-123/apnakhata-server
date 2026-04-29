@@ -129,8 +129,28 @@ export class RecurringService {
    * Manually trigger all due patterns for a user
    */
   async triggerUserSync(userId: string) {
-    const allEntries = await recurringRepository.findAll(userId);
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { lastSyncAt: true },
+    });
+
     const now = new Date();
+
+    // 1. Throttling: Only sync once every 6 hours to protect performance
+    if (user?.lastSyncAt) {
+      const lastSync = new Date(user.lastSyncAt);
+      const hoursSinceLastSync =
+        (now.getTime() - lastSync.getTime()) / (1000 * 60 * 60);
+
+      if (hoursSinceLastSync < 6) {
+        return {
+          message: "Sync throttled. System is already up-to-date.",
+          skipped: true,
+        };
+      }
+    }
+
+    const allEntries = await recurringRepository.findAll(userId);
 
     // Force sync only if the task is actually due (nextExecution <= now)
     const userDueEntries = allEntries.filter(
@@ -169,6 +189,12 @@ export class RecurringService {
         message += ` (Reason: ${firstFailure.reason})`;
       }
     }
+
+    // 2. Update lastSyncAt for the user
+    await prisma.user.update({
+      where: { id: userId },
+      data: { lastSyncAt: now },
+    });
 
     return {
       message,

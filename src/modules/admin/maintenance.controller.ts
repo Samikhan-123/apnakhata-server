@@ -56,19 +56,7 @@ export class MaintenanceController {
       // Permanent erasure of soft-deleted accounts (30d) and pruning of old admin logs (90d).
       results.cleanup = await adminService.runMaintenanceCleanup();
       logger.info(
-        `[MAINTENANCE] Cleanup Sub-task: Purged ${results.cleanup.accountsPurged} accounts and ${results.cleanup.logsPurged} logs.`,
-      );
-
-      // TASK B: Recurring Records (System-wide)
-      // Process all due recurring patterns for all active users.
-      const recurringResults = await recurringService.processDueEntries();
-      results.recurring = {
-        totalProcessed: recurringResults.length,
-        successCount: recurringResults.filter((r: any) => r.success).length,
-        failureCount: recurringResults.filter((r: any) => !r.success).length,
-      };
-      logger.info(
-        `[MAINTENANCE] Recurring Sub-task: Processed ${results.recurring.totalProcessed} entry patterns.`,
+        `[MAINTENANCE] Cleanup Sub-task (System): Purged ${results.cleanup.accountsPurged} accounts and ${results.cleanup.logsPurged} logs.`,
       );
 
       // TASK C: Log Maintenance Event to Audit Trail

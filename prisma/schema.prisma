@@ -39,6 +39,7 @@ model User {
   isActive          Boolean            @default(true)
   lastActive        DateTime           @default(now())
   lastLogin         DateTime           @default(now())
+  lastSyncAt        DateTime?
   deletionScheduledAt DateTime?
   deletionRequestedBy UserRole?
   adminActions      AdminLog[]         @relation("AdminActions")

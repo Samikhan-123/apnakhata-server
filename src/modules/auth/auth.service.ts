@@ -405,6 +405,13 @@ export class AuthService {
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new AppError("User not found", 404);
 
+    if (user.role === "ADMIN" || user.role === "MODERATOR") {
+      throw new AppError(
+        "Platform Protection: Administrative accounts cannot be scheduled for deletion.",
+        403,
+      );
+    }
+
     const deletionDate = new Date();
     deletionDate.setDate(deletionDate.getDate() + 30);
 

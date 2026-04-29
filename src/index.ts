@@ -87,6 +87,20 @@ app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
 app.use(
   helmet({
     crossOriginResourcePolicy: { policy: "cross-origin" },
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+        styleSrc: ["'self'", "'unsafe-inline'", "fonts.googleapis.com"],
+        imgSrc: ["'self'", "data:", "*.googleusercontent.com"],
+        connectSrc: ["'self'", "api.sentry.io", "*.vercel.app"],
+      },
+    },
+    frameguard: { action: "deny" },
+    hidePoweredBy: true,
+    hsts: true,
+    noSniff: true,
+    referrerPolicy: { policy: "strict-origin-when-cross-origin" },
   }),
 );
 app.use(express.json());
