@@ -43,7 +43,8 @@ import logger from "./utils/logger.js";
 const app = express();
 
 // Trust proxy (Required for Vercel/Render/proxies)
-app.set("trust proxy", true);
+// Set to 1 to trust only the immediate proxy 
+app.set("trust proxy", 1);
 
 const dashboardMiddleware = [authenticate, authorizeVerified, maintenanceGuard];
 
