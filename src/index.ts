@@ -33,7 +33,10 @@ import {
   authenticate,
   authorizeVerified,
 } from "./middlewares/auth.middleware.js";
-import { authLimiter } from "./middlewares/rate-limit.middleware.js";
+import {
+  authLimiter,
+  apiLimiter,
+} from "./middlewares/rate-limit.middleware.js";
 import adminRoutes from "./modules/admin/admin.routes.js";
 import supportRoutes from "./modules/support/support.routes.js";
 import { maintenanceGuard } from "./middlewares/maintenance.middleware.js";
@@ -46,9 +49,14 @@ const app = express();
 // Set to 1 to trust only the immediate proxy 
 app.set("trust proxy", 1);
 
-const dashboardMiddleware = [authenticate, authorizeVerified, maintenanceGuard];
+const dashboardMiddleware = [
+  authenticate,
+  apiLimiter,
+  authorizeVerified,
+  maintenanceGuard,
+];
 
-// --- PRODUCTION-READY FAIL-SAFE CORS ---
+// --- FAIL-SAFE CORS ---
 app.use((req, res, next) => {
   const origin = req.headers.origin;
 

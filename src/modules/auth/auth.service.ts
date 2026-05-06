@@ -33,7 +33,7 @@ export class AuthService {
     const isRegEnabled = await settingsService.isRegistrationEnabled();
     if (!isRegEnabled && data.email !== process.env.ADMIN_EMAIL) {
       throw new AppError(
-        "Public registration is currently disabled by the administrator.",
+        "Public registration is currently disabled by the administration.",
         403,
       );
     }
@@ -342,7 +342,7 @@ export class AuthService {
         const isRegEnabled = await settingsService.isRegistrationEnabled();
         if (!isRegEnabled && emailLower !== process.env.ADMIN_EMAIL) {
           throw new AppError(
-            "Public registration is currently disabled by the administrator.",
+            "Public registration is currently disabled by the administration.",
             403,
           );
         }
