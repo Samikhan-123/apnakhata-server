@@ -48,31 +48,26 @@ export class AdminService {
     });
 
     // Get User Trends (Last 6 Months)
-    const userTrends = [];
+    const userTrendsPromises = [];
     const now = new Date();
 
     for (let i = 5; i >= 0; i--) {
       const monthDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const nextMonthDate = new Date(
-        now.getFullYear(),
-        now.getMonth() - i + 1,
-        1,
-      );
+      const nextMonthDate = new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
 
-      const count = await prisma.user.count({
-        where: {
-          createdAt: {
-            gte: monthDate,
-            lt: nextMonthDate,
+      userTrendsPromises.push(
+        prisma.user.count({
+          where: {
+            createdAt: { gte: monthDate, lt: nextMonthDate },
           },
-        },
-      });
-
-      userTrends.push({
-        month: monthDate.toLocaleString("default", { month: "short" }),
-        count,
-      });
+        }).then((count) => ({
+          month: monthDate.toLocaleString("default", { month: "short" }),
+          count,
+        }))
+      );
     }
+    
+    const userTrends = await Promise.all(userTrendsPromises);
 
     return {
       totalUsers,
@@ -541,178 +536,153 @@ export class AdminService {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    // 1. Get Daily Volume Trends (Last 30 Days) - Group by Date and Type
-    const dailyStats = await (prisma.ledgerEntry as any).groupBy({
-      by: ["date", "type"],
-      where: {
-        date: { gte: thirtyDaysAgo },
-      },
-      _sum: { amount: true },
-      _count: { id: true },
-      orderBy: { date: "asc" },
+    const sevenDaysAgoForActivity = new Date();
+    sevenDaysAgoForActivity.setDate(sevenDaysAgoForActivity.getDate() - 7);
+    
+    const twentyFourHoursAgo = new Date();
+    twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - 24);
+
+    // 1. Parallelize all expensive queries
+    const [
+      recentTransactions,      // 30 days of transactions (for volume trends & avg)
+      rawCategoryDistribution, // Global category breakdown
+      currencyDistribution,    // User currency preferences
+      recentSignups,           // 7 days of signups
+      recentActiveUsers,       // 7 days of active users (DAU)
+      topUsersRaw,             // Top active users (30 days)
+      activeUsersLast24h       // Last 24h presence
+    ] = await Promise.all([
+      prisma.ledgerEntry.findMany({
+        where: { date: { gte: thirtyDaysAgo } },
+        select: { date: true, type: true, amount: true },
+        orderBy: { date: "asc" },
+      }),
+      (prisma.ledgerEntry as any).groupBy({
+        by: ["categoryId", "type"],
+        _sum: { amount: true },
+        _count: { id: true },
+      }),
+      (prisma.user as any).groupBy({
+        by: ["baseCurrency"],
+        _count: { id: true },
+        orderBy: { _count: { id: "desc" } },
+      }),
+      prisma.user.findMany({
+        where: { createdAt: { gte: sevenDaysAgoForActivity } },
+        select: { createdAt: true },
+      }),
+      prisma.ledgerEntry.findMany({
+        where: { date: { gte: sevenDaysAgoForActivity } },
+        select: { date: true, userId: true },
+      }),
+      (prisma.ledgerEntry as any).groupBy({
+        by: ["userId"],
+        _count: { id: true },
+        where: { date: { gte: thirtyDaysAgo } },
+        orderBy: { _count: { id: "desc" } },
+        take: 5,
+      }),
+      prisma.user.count({
+        where: { lastActive: { gte: twentyFourHoursAgo } },
+      })
+    ]);
+
+    // 2. Process Daily Volume Trends (O(n) In-Memory Map)
+    const trendsMap: Record<string, { date: string; income: number; expense: number; count: number }> = {};
+    let totalTxAmount = 0;
+    
+    recentTransactions.forEach((txn) => {
+      const d = txn.date.toISOString().split("T")[0];
+      if (!trendsMap[d]) trendsMap[d] = { date: d, income: 0, expense: 0, count: 0 };
+      
+      const amt = Number(txn.amount || 0);
+      if (txn.type === "INCOME") trendsMap[d].income += amt;
+      else if (txn.type === "EXPENSE") trendsMap[d].expense += amt;
+      
+      trendsMap[d].count += 1;
+      totalTxAmount += amt;
     });
 
-    // Map into daily objects with income/expense buckets
-    const trendsMap: Record<
-      string,
-      { date: string; income: number; expense: number; count: number }
-    > = {};
-
-    dailyStats.forEach((stat: any) => {
-      const d = stat.date.toISOString().split("T")[0];
-      if (!trendsMap[d]) {
-        trendsMap[d] = { date: d, income: 0, expense: 0, count: 0 };
+    const volumeTrends = Object.values(trendsMap).sort((a, b) => a.date.localeCompare(b.date));
+    
+    // Find Peak Volume Date
+    let peakVolumeDate = null;
+    let peakAmount = -1;
+    for (const t of volumeTrends) {
+      const totalDayVol = t.income + t.expense;
+      if (totalDayVol > peakAmount) {
+        peakAmount = totalDayVol;
+        peakVolumeDate = t.date;
       }
-      if (stat.type === "INCOME")
-        trendsMap[d].income = Number(stat._sum.amount || 0);
-      else if (stat.type === "EXPENSE")
-        trendsMap[d].expense = Number(stat._sum.amount || 0);
-      trendsMap[d].count += stat._count.id;
-    });
+    }
 
-    const volumeTrends = Object.values(trendsMap).sort((a, b) =>
-      a.date.localeCompare(b.date),
-    );
-
-    // 2. Category Breakdown (Platform Wide) - Aggregated by Category Name for True Market View
-    const rawCategoryDistribution = await (prisma.ledgerEntry as any).groupBy({
-      by: ["categoryId", "type"],
-      _sum: { amount: true },
-      _count: { id: true },
-    });
-
-    const categoryIds = rawCategoryDistribution
-      .map((c: any) => c.categoryId)
-      .filter(Boolean) as string[];
+    // 3. Process Category Breakdown
+    const categoryIds = rawCategoryDistribution.map((c: any) => c.categoryId).filter(Boolean) as string[];
     const categories = await prisma.category.findMany({
       where: { id: { in: categoryIds } },
       select: { id: true, name: true, icon: true },
     });
 
-    // 2.1 Consolidated aggregation by Name (Best Practice for Platform-Wide Analytics)
     const consolidatedMap: Record<string, any> = {};
-
     rawCategoryDistribution.forEach((stat: any) => {
       const cat = categories.find((c) => c.id === stat.categoryId);
       const name = cat?.name || "Uncategorized";
-      const type = stat.type;
-      const key = `${name}_${type}`;
+      const key = `${name}_${stat.type}`;
 
       if (!consolidatedMap[key]) {
-        consolidatedMap[key] = {
-          name,
-          icon: cat?.icon || "Package",
-          value: 0,
-          count: 0,
-          type,
-        };
+        consolidatedMap[key] = { name, icon: cat?.icon || "Package", value: 0, count: 0, type: stat.type };
       }
       consolidatedMap[key].value += Number(stat._sum.amount || 0);
       consolidatedMap[key].count += stat._count.id;
     });
+    const distribution = Object.values(consolidatedMap).sort((a: any, b: any) => b.value - a.value).slice(0, 15);
 
-    const distribution = Object.values(consolidatedMap)
-      .sort((a: any, b: any) => b.value - a.value)
-      .slice(0, 15);
-
-    // 3. Currency Distribution (User Preferences)
-    const currencyDistribution = await (prisma.user as any).groupBy({
-      by: ["baseCurrency"],
-      _count: { id: true },
-      orderBy: {
-        _count: { id: "desc" },
-      },
-    });
-
+    // 4. Process Currency Distribution
     const currencies = currencyDistribution.map((stat: any) => ({
       currency: stat.baseCurrency,
       userCount: stat._count.id,
     }));
 
-    // 4. Platform Activity (Signups & DAU) - Last 7 Days with 0-padding
-    const activitySummaryMap: Record<
-      string,
-      { signups: number; activeUsers: number }
-    > = {};
-    const sevenDaysAgoForActivity = new Date();
-    sevenDaysAgoForActivity.setDate(sevenDaysAgoForActivity.getDate() - 7);
-
+    // 5. Process Activity (Signups & DAU)
+    const activitySummaryMap: Record<string, { signups: number; activeUsers: number }> = {};
     for (let i = 6; i >= 0; i--) {
       const d = new Date();
       d.setDate(d.getDate() - i);
-      activitySummaryMap[d.toISOString().split("T")[0]] = {
-        signups: 0,
-        activeUsers: 0,
-      };
+      activitySummaryMap[d.toISOString().split("T")[0]] = { signups: 0, activeUsers: 0 };
     }
 
-    // Signups
-    const dailySignups = await (prisma.user as any).groupBy({
-      by: ["createdAt"],
-      where: { createdAt: { gte: sevenDaysAgoForActivity } },
-      _count: { id: true },
-    });
-    dailySignups.forEach((s: any) => {
-      const d = s.createdAt.toISOString().split("T")[0];
-      if (activitySummaryMap[d]) activitySummaryMap[d].signups = s._count.id;
+    recentSignups.forEach((u: any) => {
+      const d = u.createdAt.toISOString().split("T")[0];
+      if (activitySummaryMap[d]) activitySummaryMap[d].signups += 1;
     });
 
-    // DAU (Daily Active Users based on session activity/ledger entries)
-    const dauStats = await (prisma.ledgerEntry as any).groupBy({
-      by: ["date", "userId"],
-      where: { date: { gte: sevenDaysAgoForActivity } },
-    });
     const dailyUniqueUsers: Record<string, Set<string>> = {};
-    dauStats.forEach((s: any) => {
-      const d = s.date.toISOString().split("T")[0];
+    recentActiveUsers.forEach((txn: any) => {
+      const d = txn.date.toISOString().split("T")[0];
       if (!dailyUniqueUsers[d]) dailyUniqueUsers[d] = new Set();
-      dailyUniqueUsers[d].add(s.userId);
+      dailyUniqueUsers[d].add(txn.userId);
     });
+
     Object.entries(dailyUniqueUsers).forEach(([date, users]) => {
-      if (activitySummaryMap[date])
-        activitySummaryMap[date].activeUsers = users.size;
+      if (activitySummaryMap[date]) activitySummaryMap[date].activeUsers = users.size;
     });
 
-    const activityTrends = Object.entries(activitySummaryMap).map(
-      ([date, data]) => ({
-        date: new Date(date).toLocaleDateString("default", {
-          month: "short",
-          day: "numeric",
-        }),
-        signups: data.signups,
-        activeUsers: data.activeUsers,
-      }),
-    );
+    const activityTrends = Object.entries(activitySummaryMap).map(([date, data]) => ({
+      date: new Date(date).toLocaleDateString("default", { month: "short", day: "numeric" }),
+      signups: data.signups,
+      activeUsers: data.activeUsers,
+    }));
 
-    // 5. Top Active Users (Most transactions in last 30 days)
-    const topUsers = await (prisma.ledgerEntry as any).groupBy({
-      by: ["userId"],
-      _count: { id: true },
-      where: { date: { gte: thirtyDaysAgo } },
-      orderBy: { _count: { id: "desc" } },
-      take: 5,
-    });
-
-    const topUserIds = topUsers.map((u: any) => u.userId);
+    // 6. Process Top Users
+    const topUserIds = topUsersRaw.map((u: any) => u.userId);
     const topUsersDetails = await prisma.user.findMany({
       where: { id: { in: topUserIds } },
       select: { id: true, name: true, email: true, image: true },
     });
 
-    const topActiveUsers = topUsers.map((u: any) => {
+    const topActiveUsers = topUsersRaw.map((u: any) => {
       const details = topUsersDetails.find((d) => d.id === u.userId);
-      return {
-        ...details,
-        activityCount: u._count.id,
-      };
-    });
-
-    // 6. Real-time Platform Presence (DAU based on lastActive)
-    const twentyFourHoursAgo = new Date();
-    twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - 24);
-
-    const activeUsersLast24h = await prisma.user.count({
-      where: { lastActive: { gte: twentyFourHoursAgo } },
+      return { ...details, activityCount: u._count.id };
     });
 
     return {
@@ -725,23 +695,8 @@ export class AdminService {
       summary: {
         totalIncome: volumeTrends.reduce((acc, curr) => acc + curr.income, 0),
         totalExpense: volumeTrends.reduce((acc, curr) => acc + curr.expense, 0),
-        avgTransaction:
-          dailyStats.length > 0
-            ? Number(
-                dailyStats.reduce(
-                  (acc: any, s: any) => acc + Number(s._sum.amount),
-                  0,
-                ) /
-                  dailyStats.reduce((acc: any, s: any) => acc + s._count.id, 0),
-              )
-            : 0,
-        peakVolumeDate: dailyStats.reduce(
-          (prev: any, current: any) =>
-            Number(prev?._sum?.amount || 0) > Number(current._sum?.amount || 0)
-              ? prev
-              : current,
-          dailyStats[0],
-        )?.date,
+        avgTransaction: recentTransactions.length > 0 ? Number((totalTxAmount / recentTransactions.length).toFixed(2)) : 0,
+        peakVolumeDate: peakVolumeDate ? new Date(peakVolumeDate) : null,
       },
     };
   }

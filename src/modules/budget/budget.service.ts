@@ -10,41 +10,46 @@ export class BudgetService {
   async getBudgetsWithProgress(userId: string, month: number, year: number) {
     const budgets = await budgetRepository.findAll(userId, month, year);
 
-    // For each budget, calculate spent amount
-    const budgetsWithProgress = await Promise.all(
-      budgets.map(async (budget: any) => {
-        const spent = await prisma.ledgerEntry.aggregate({
-          where: {
-            userId,
-            categoryId: budget.categoryId,
-            type: "EXPENSE",
-            date: {
-              gte: new Date(year, month - 1, 1),
-              lt: new Date(year, month, 1),
-            },
-          },
-          _sum: {
-            amount: true,
-          },
-        });
-        // calculate spent amount
-        const spentAmount = Number(spent._sum.amount || 0);
-        // calculate progress
-        const progress =
-          budget.limit.toNumber() > 0
-            ? (spentAmount / budget.limit.toNumber()) * 100
-            : 0;
+    if (!budgets.length) return [];
 
-        return {
-          ...budget,
-          spent: spentAmount,
-          progress: Math.min(progress, 100),
-          isOverBudget: spentAmount > budget.limit.toNumber(),
-        };
-      }),
-    );
+    const categoryIds = budgets.map((b: any) => b.categoryId);
 
-    return budgetsWithProgress;
+    // Fetch all relevant expenses in a single query (O(1) database queries instead of O(N))
+    const expenses = await prisma.ledgerEntry.groupBy({
+      by: ["categoryId"],
+      where: {
+        userId,
+        type: "EXPENSE",
+        categoryId: { in: categoryIds },
+        date: {
+          gte: new Date(year, month - 1, 1),
+          lt: new Date(year, month, 1),
+        },
+      },
+      _sum: {
+        amount: true,
+      },
+    });
+
+    const expenseMap = new Map();
+    expenses.forEach((e) => {
+      expenseMap.set(e.categoryId, Number(e._sum.amount || 0));
+    });
+
+    return budgets.map((budget: any) => {
+      const spentAmount = expenseMap.get(budget.categoryId) || 0;
+      const progress =
+        budget.limit.toNumber() > 0
+          ? (spentAmount / budget.limit.toNumber()) * 100
+          : 0;
+
+      return {
+        ...budget,
+        spent: spentAmount,
+        progress: Math.min(progress, 100),
+        isOverBudget: spentAmount > budget.limit.toNumber(),
+      };
+    });
   }
 
   /**

@@ -237,12 +237,6 @@ export class LedgerEntryService {
     const { startDate, endDate } = filters;
     const now = new Date();
 
-    // 1. OVERVIEW DATES (Strictly based on User Filters)
-    const overview = await ledgerEntryRepository.getFinancialSummary(
-      userId,
-      filters,
-    );
-
     // 2. TREND DATES (Expanded to 12 Months to support 1Y frontend toggle)
     const trendStartDate = new Date(now.getFullYear(), now.getMonth() - 11, 1);
     trendStartDate.setHours(0, 0, 0, 0);
@@ -256,39 +250,64 @@ export class LedgerEntryService {
       999,
     );
 
-    // Fetch data for Category Breakdown (based on current window/filters)
-    const categoryEntries = await prisma.ledgerEntry.findMany({
-      where: {
-        userId,
-        date: {
-          gte: startDate
-            ? new Date(startDate)
-            : new Date(now.getFullYear(), now.getMonth(), 1),
-          lte: endDate ? new Date(endDate) : now,
+    // 3. Parallelize all queries
+    const [
+      overview,
+      categoryEntries,
+      trendEntries,
+      recentEntries,
+      beforeStats,
+      settings,
+      totalRecords,
+    ] = await Promise.all([
+      // 1. OVERVIEW DATES
+      ledgerEntryRepository.getFinancialSummary(userId, filters),
+      // 2. Fetch data for Category Breakdown
+      prisma.ledgerEntry.findMany({
+        where: {
+          userId,
+          date: {
+            gte: startDate
+              ? new Date(startDate)
+              : new Date(now.getFullYear(), now.getMonth(), 1),
+            lte: endDate ? new Date(endDate) : now,
+          },
+          ...(filters.categoryId && { categoryId: filters.categoryId }),
+          ...(filters.search && {
+            description: { contains: filters.search, mode: "insensitive" },
+          }),
         },
-        ...(filters.categoryId && { categoryId: filters.categoryId }),
-        ...(filters.search && {
-          description: { contains: filters.search, mode: "insensitive" },
-        }),
-      },
-      include: { category: true },
-    });
-
-    // Fetch data for Trends (Fixed 6-month window)
-    const trendEntries = await prisma.ledgerEntry.findMany({
-      where: {
-        userId,
-        date: { gte: trendStartDate, lte: trendEndDate },
-      },
-      include: { category: true },
-    });
-
-    const recentEntries = await prisma.ledgerEntry.findMany({
-      where: { userId },
-      include: { category: true },
-      orderBy: { date: "desc" },
-      take: 5,
-    });
+        include: { category: true },
+      }),
+      // 3. Fetch data for Trends
+      prisma.ledgerEntry.findMany({
+        where: {
+          userId,
+          date: { gte: trendStartDate, lte: trendEndDate },
+        },
+        include: { category: true },
+      }),
+      // 4. Fetch recent entries
+      prisma.ledgerEntry.findMany({
+        where: { userId },
+        include: { category: true },
+        orderBy: { date: "desc" },
+        take: 5,
+      }),
+      // 5. Cumulative balance for Trends
+      prisma.ledgerEntry.groupBy({
+        by: ["type"],
+        where: {
+          userId,
+          date: { lt: trendStartDate },
+        },
+        _sum: { amount: true },
+      }),
+      // 6. Global settings
+      settingsService.getSettings(),
+      // 7. Total records
+      prisma.ledgerEntry.count({ where: { userId } }),
+    ]);
 
     const categoryMap = new Map<string, number>();
     categoryEntries
@@ -318,15 +337,7 @@ export class LedgerEntryService {
       iterDate.setMonth(iterDate.getMonth() + 1);
     }
 
-    // Cumulative balance for Trends
-    const beforeStats = await prisma.ledgerEntry.groupBy({
-      by: ["type"],
-      where: {
-        userId,
-        date: { lt: trendStartDate },
-      },
-      _sum: { amount: true },
-    });
+    // Cumulative balance for Trends was fetched in Promise.all
 
     let currentBalance =
       Number(
@@ -361,8 +372,7 @@ export class LedgerEntryService {
       stats.balance = currentBalance;
     });
 
-    const settings = await settingsService.getSettings();
-    const totalRecords = await prisma.ledgerEntry.count({ where: { userId } });
+    // Settings and total records were fetched in Promise.all
 
     return {
       overview: {

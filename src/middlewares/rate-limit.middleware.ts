@@ -47,3 +47,21 @@ export const authLimiter = rateLimit({
   legacyHeaders: false,
   // IP identifies the attacker node clearly here.
 });
+
+/**
+ * AI API Rate Limiter
+ * 5 requests per minute
+ * Prevents users from abusing the Gemini API and exhausting global quotas.
+ */
+export const aiLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 5,
+  keyGenerator,
+  validate: { default: false },
+  message: {
+    success: false,
+    message: "AI analysis limit reached. Please wait a minute before requesting more insights.",
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});

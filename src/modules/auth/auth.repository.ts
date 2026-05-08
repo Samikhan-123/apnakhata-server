@@ -21,6 +21,7 @@ export class AuthRepository {
         role: true,
         lastActive: true,
         createdAt: true,
+        baseCurrency: true,
       },
     });
   }

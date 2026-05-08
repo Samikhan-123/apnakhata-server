@@ -40,6 +40,7 @@ import {
 import adminRoutes from "./modules/admin/admin.routes.js";
 import supportRoutes from "./modules/support/support.routes.js";
 import { maintenanceGuard } from "./middlewares/maintenance.middleware.js";
+import aiAdvisorRoutes from "./modules/ai-advisor/ai-advisor.routes.js";
 import { getSystemStatus } from "./modules/status/status.controller.js";
 import logger from "./utils/logger.js";
 
@@ -130,6 +131,7 @@ app.use("/api/categories", dashboardMiddleware, categoryRoutes);
 app.use("/api/budgets", dashboardMiddleware, budgetRoutes);
 app.use("/api/support", supportRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/ai-advisor", aiAdvisorRoutes);
 
 // Sentry Error Handler (Must be before your custom error handler)
 Sentry.setupExpressErrorHandler(app);
