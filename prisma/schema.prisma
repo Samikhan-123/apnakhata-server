@@ -21,6 +21,7 @@ model User {
   categories        Category[]
   ledgerEntries     LedgerEntry[]
   budgets           Budget[]
+  goals             Goal[]
   recurringEntries  RecurringEntry[]
   baseCurrency      String             @default("PKR")
   isVerified        Boolean            @default(false)
@@ -79,6 +80,8 @@ model LedgerEntry {
   userId          String
   category        Category?        @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   categoryId      String?
+  goal            Goal?            @relation(fields: [goalId], references: [id], onDelete: SetNull)
+  goalId          String?
   receiptUrl      String?
   receiptPublicId String?
   createdAt       DateTime         @default(now())
@@ -163,4 +166,31 @@ model SystemSettings {
   registrationEnabled Boolean  @default(true)
   maxEntriesLimit     Int?     @default(5000)
   updatedAt           DateTime @updatedAt
+}
+
+model Goal {
+  id           String        @id @default(uuid())
+  userId       String
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  name         String
+  targetAmount Decimal       @db.Decimal(12, 2)
+  savedAmount  Decimal       @default(0) @db.Decimal(12, 2)
+  targetDate   DateTime?
+  
+  color        String?
+  icon         String?
+  status       GoalStatus    @default(IN_PROGRESS)
+  
+  entries      LedgerEntry[]
+  
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@index([userId])
+}
+
+enum GoalStatus {
+  IN_PROGRESS
+  COMPLETED
 }

@@ -15,6 +15,9 @@ export class BudgetService {
     const categoryIds = budgets.map((b: any) => b.categoryId);
 
     // Fetch all relevant expenses in a single query (O(1) database queries instead of O(N))
+    const startDate = new Date(Date.UTC(year, month - 1, 1));
+    const endDate = new Date(Date.UTC(year, month, 1));
+
     const expenses = await prisma.ledgerEntry.groupBy({
       by: ["categoryId"],
       where: {
@@ -22,8 +25,8 @@ export class BudgetService {
         type: "EXPENSE",
         categoryId: { in: categoryIds },
         date: {
-          gte: new Date(year, month - 1, 1),
-          lt: new Date(year, month, 1),
+          gte: startDate,
+          lt: endDate,
         },
       },
       _sum: {

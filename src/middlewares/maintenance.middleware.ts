@@ -45,7 +45,7 @@ export const maintenanceGuard = async (
     });
   } catch (error) {
     // If settings check fails, default to allowing next() to avoid locking everyone out
-    // but log it privately if possible.
+    // and let the actual route handle the DB failure (if any).
     next();
   }
 };

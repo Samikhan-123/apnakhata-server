@@ -10,7 +10,7 @@ export class LedgerEntryRepository {
     return await client.ledgerEntry.create({
       data: {
         amount: data.amount,
-        description: data.description.toLowerCase(),
+        description: data.description,
         date: new Date(data.date || new Date()),
         type: data.type,
         userId,
@@ -106,35 +106,22 @@ export class LedgerEntryRepository {
       }),
     };
 
-    const [incomeStats, expenseStats] = await Promise.all([
-      // Income should NOT be filtered by category (as income usually has no category)
-      prisma.ledgerEntry.groupBy({
-        by: ["type"],
-        where: {
-          userId,
-          type: "INCOME",
-          ...commonFilter,
-        },
-        _sum: { amount: true },
-      }),
-      // Expense should be filtered by category if specified
-      prisma.ledgerEntry.groupBy({
-        by: ["type"],
-        where: {
-          userId,
-          type: "EXPENSE",
-          ...(categoryId && { categoryId }),
-          ...commonFilter,
-        },
-        _sum: { amount: true },
-      }),
-    ]);
+    // Single optimized query to get both income and expense
+    const stats = await prisma.ledgerEntry.groupBy({
+      by: ["type"],
+      where: {
+        userId,
+        ...(categoryId && { categoryId }),
+        ...commonFilter,
+      },
+      _sum: { amount: true },
+    });
 
     const income = Number(
-      incomeStats.find((s: any) => s.type === "INCOME")?._sum.amount || 0,
+      stats.find((s: any) => s.type === "INCOME")?._sum.amount || 0,
     );
     const expense = Number(
-      expenseStats.find((s: any) => s.type === "EXPENSE")?._sum.amount || 0,
+      stats.find((s: any) => s.type === "EXPENSE")?._sum.amount || 0,
     );
 
     return {

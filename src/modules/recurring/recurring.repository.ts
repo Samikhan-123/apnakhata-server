@@ -1,4 +1,4 @@
-import { PrismaClient, Frequency, LedgerEntryType } from "@prisma/client";
+import { Frequency, LedgerEntryType } from "@prisma/client";
 import prisma from "../../config/prisma.js";
 
 export interface CreateRecurringInput {

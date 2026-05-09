@@ -57,11 +57,17 @@ class AIAdvisorService {
       const startOfYear = new Date(currentYear, 0, 1).toISOString();
       const endOfYear = new Date(currentYear, 11, 31, 23, 59, 59).toISOString();
 
+      const startOfCurrentMonth = new Date(currentYear, currentMonth - 1, 1).toISOString();
+      const endOfCurrentMonth = new Date(currentYear, currentMonth, 0, 23, 59, 59, 999).toISOString();
+
       const [stats, prevStats, yearlyStats, budgets, user] = await Promise.all([
-        ledgerEntryService.getDashboardStats(userId),
+        ledgerEntryService.getDashboardStats(userId, {
+          startDate: startOfCurrentMonth,
+          endDate: endOfCurrentMonth,
+        }),
         ledgerEntryService.getDashboardStats(userId, {
           startDate: new Date(prevYear, prevMonth - 1, 1).toISOString(),
-          endDate: new Date(prevYear, prevMonth, 0).toISOString(),
+          endDate: new Date(prevYear, prevMonth, 0, 23, 59, 59, 999).toISOString(),
         }),
         ledgerEntryService.getDashboardStats(userId, {
           startDate: startOfYear,

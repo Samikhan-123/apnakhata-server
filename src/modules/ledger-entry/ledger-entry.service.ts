@@ -25,36 +25,40 @@ export class LedgerEntryService {
       );
     }
 
-    // 2. Income First Rule: Cannot add expense if balance is insufficient
-    if (data.type === "EXPENSE") {
-      const summary = await ledgerEntryRepository.getFinancialSummary(userId);
-      if (summary.totalIncome <= 0) {
-        throw new AppError(
-          "Please add your income first to start recording expenses.",
-          400,
-        );
-      }
-      if (summary.remainingBalance < data.amount) {
-        throw new AppError(
-          `Insufficient funds. Your current balance is ${summary.remainingBalance}, but this expense is ${data.amount}.`,
-          400,
-        );
-      }
-    }
+    // Standardize description: Capitalize first letter, keep the rest as user typed (Preserves brand names like BMW)
+    const formattedDescription = data.description.trim();
 
-    // 3. Date Normalization: Hybrid Logic
-    const finalDate = this.normalizeEntryDate(
-      new Date(data.date || new Date()),
-    );
-
-    // Enforce 3-Month Window for creation
+    // Hybrid Date Normalization
+    const finalDate = this.normalizeEntryDate(new Date(data.date || new Date()));
     this.validateDateWindow(finalDate);
 
-    // Standard income/expense entry. Normalized to lowercase.
-    return await ledgerEntryRepository.create(userId, {
-      ...data,
-      date: finalDate.toISOString(),
-      description: data.description.toLowerCase(),
+    // 2. Wrap creation in a transaction to ensure atomic balance guarding
+    return await prisma.$transaction(async (tx) => {
+      // Income First Rule: Cannot add expense if balance is insufficient
+      if (data.type === "EXPENSE") {
+        const stats = await tx.ledgerEntry.groupBy({
+          by: ["type"],
+          where: { userId },
+          _sum: { amount: true },
+        });
+
+        const income = Number(stats.find((s: any) => s.type === "INCOME")?._sum.amount || 0);
+        const expense = Number(stats.find((s: any) => s.type === "EXPENSE")?._sum.amount || 0);
+        const availableBalance = income - expense;
+
+        if (income <= 0) {
+          throw new AppError("Please add your income first to start recording expenses.", 400);
+        }
+        if (availableBalance < data.amount) {
+          throw new AppError(`Insufficient funds. Your current balance is ${availableBalance}, but this expense is ${data.amount}.`, 400);
+        }
+      }
+
+      return await ledgerEntryRepository.create(userId, {
+        ...data,
+        date: finalDate.toISOString(),
+        description: formattedDescription,
+      }, tx);
     });
   }
 
@@ -262,22 +266,27 @@ export class LedgerEntryService {
     ] = await Promise.all([
       // 1. OVERVIEW DATES
       ledgerEntryRepository.getFinancialSummary(userId, filters),
-      // 2. Fetch data for Category Breakdown
-      prisma.ledgerEntry.findMany({
+      // 2. Category Breakdown Aggregation — DB-level for O(1) performance
+      prisma.ledgerEntry.groupBy({
+        by: ["categoryId"],
         where: {
           userId,
+          type: "EXPENSE",
           date: {
             gte: startDate
               ? new Date(startDate)
-              : new Date(now.getFullYear(), now.getMonth(), 1),
-            lte: endDate ? new Date(endDate) : now,
+              : new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)),
+            lte: endDate
+              ? new Date(endDate)
+              : new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0, 23, 59, 59, 999)),
           },
           ...(filters.categoryId && { categoryId: filters.categoryId }),
           ...(filters.search && {
             description: { contains: filters.search, mode: "insensitive" },
           }),
         },
-        include: { category: true },
+        _sum: { amount: true },
+        _count: { id: true },
       }),
       // 3. Fetch data for Trends
       prisma.ledgerEntry.findMany({
@@ -309,18 +318,18 @@ export class LedgerEntryService {
       prisma.ledgerEntry.count({ where: { userId } }),
     ]);
 
-    const categoryMap = new Map<string, number>();
-    categoryEntries
-      .filter((e: any) => e.type === "EXPENSE")
-      .forEach((entry: any) => {
-        const catName = entry.category?.name || "uncategorized";
-        const catAmount = Number(entry.amount);
-        categoryMap.set(catName, (categoryMap.get(catName) || 0) + catAmount);
-      });
+    // Fetch category names for the IDs returned by groupBy
+    const categoryIds = (categoryEntries as any[]).map((e) => e.categoryId).filter(Boolean) as string[];
+    const categoryEntities = await prisma.category.findMany({
+      where: { id: { in: categoryIds } }
+    });
+    const categoryNameMap = new Map(categoryEntities.map(c => [c.id, c.name]));
 
-    const categoryBreakdown = Array.from(categoryMap.entries()).map(
-      ([name, value]) => ({ name, value }),
-    );
+    const categoryBreakdown = (categoryEntries as any[]).map((e) => ({
+      name: categoryNameMap.get(e.categoryId) || "uncategorized",
+      value: Number(e._sum.amount || 0),
+      count: e._count?.id || 0,
+    }));
 
     // Monthly Trends Calculation
     const monthlyTrendsMap = new Map();

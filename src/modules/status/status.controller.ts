@@ -12,7 +12,7 @@ export const getSystemStatus = async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    // Fail safe: if settings can't be fetched, assume operational
+    // Fail safe: if settings can't be fetched, assume operational to avoid lockouts
     res.status(200).json({
       success: true,
       data: {

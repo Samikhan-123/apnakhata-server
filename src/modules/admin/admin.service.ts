@@ -139,6 +139,7 @@ export class AdminService {
               ledgerEntries: true,
               categories: true,
               budgets: true,
+              goals: true,
             },
           },
         },
@@ -366,6 +367,7 @@ export class AdminService {
             categories: true,
             budgets: true,
             recurringEntries: true,
+            goals: true,
           },
         },
       },
@@ -375,11 +377,32 @@ export class AdminService {
       throw new Error("User not found");
     }
 
+    // Advanced: Calculate User Specific Financial Health for Admin View
+    const [income, expense] = await Promise.all([
+      prisma.ledgerEntry.aggregate({
+        where: { userId: id, type: "INCOME" },
+        _sum: { amount: true },
+      }),
+      prisma.ledgerEntry.aggregate({
+        where: { userId: id, type: "EXPENSE" },
+        _sum: { amount: true },
+      }),
+    ]);
+
+    const totalIncome = Number(income._sum.amount || 0);
+    const totalExpense = Number(expense._sum.amount || 0);
+    const netBalance = totalIncome - totalExpense;
+
     // Calculate Risk Profile
     const riskProfile = this.calculateRiskProfile(user);
 
     return {
       ...user,
+      financialHealth: {
+        totalIncome,
+        totalExpense,
+        netBalance,
+      },
       riskProfile,
     };
   }

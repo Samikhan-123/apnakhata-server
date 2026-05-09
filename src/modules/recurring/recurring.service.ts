@@ -1,4 +1,4 @@
-import { Frequency } from "@prisma/client";
+import { Frequency, LedgerEntryType } from "@prisma/client";
 import recurringRepository from "./recurring.repository.js";
 import ledgerEntryRepository from "../ledger-entry/ledger-entry.repository.js";
 import prisma from "../../config/prisma.js";
@@ -49,6 +49,29 @@ export class RecurringService {
     return next;
   }
 
+  /**
+   * Computes real-time available balance with a single O(1) groupBy.
+   * Shared by all balance-check operations to avoid code duplication.
+   * Balance = SUM(INCOME) - SUM(EXPENSE)
+   */
+  private async getAvailableBalance(userId: string): Promise<number> {
+    const grouped = await prisma.ledgerEntry.groupBy({
+      by: ["type"],
+      where: { userId },
+      _sum: { amount: true },
+    });
+
+    let income = 0;
+    let expense = 0;
+    for (const row of grouped) {
+      if (row.type === LedgerEntryType.INCOME)
+        income = Number(row._sum.amount ?? 0);
+      else if (row.type === LedgerEntryType.EXPENSE)
+        expense = Number(row._sum.amount ?? 0);
+    }
+    return income - expense;
+  }
+
   async processDueEntries() {
     const dueEntries = await recurringRepository.findDuePatterns();
     const results = [];
@@ -56,15 +79,10 @@ export class RecurringService {
     for (const entry of dueEntries) {
       try {
         await prisma.$transaction(async (tx: any) => {
-          // 0. Income First Rule for Recurring Expenses
+          // 0. Income First Rule for Recurring Expenses (single O(1) groupBy)
           if (entry.type === "EXPENSE") {
-            const summary = await ledgerEntryRepository.getFinancialSummary(
-              entry.userId,
-            );
-            if (
-              summary.totalIncome <= 0 ||
-              summary.remainingBalance < Number(entry.amount)
-            ) {
+            const availableBalance = await this.getAvailableBalance(entry.userId);
+            if (availableBalance < Number(entry.amount)) {
               await recurringRepository.update(entry.id, {
                 lastStatus: "INSUFFICIENT_BALANCE",
                 lastStatusDate: new Date(),
@@ -207,15 +225,10 @@ export class RecurringService {
 
   private async processSingleEntry(entry: any) {
     return await prisma.$transaction(async (tx: any) => {
-      // Income First Rule
+      // Income First Rule (single O(1) groupBy — consistent with Goal service)
       if (entry.type === "EXPENSE") {
-        const summary = await ledgerEntryRepository.getFinancialSummary(
-          entry.userId,
-        );
-        if (
-          summary.totalIncome <= 0 ||
-          summary.remainingBalance < Number(entry.amount)
-        ) {
+        const availableBalance = await this.getAvailableBalance(entry.userId);
+        if (availableBalance < Number(entry.amount)) {
           await recurringRepository.update(entry.id, {
             lastStatus: "INSUFFICIENT_BALANCE",
             lastStatusDate: new Date(),

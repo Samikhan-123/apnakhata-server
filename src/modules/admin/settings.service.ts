@@ -14,10 +14,24 @@ export class SettingsService {
     const now = Date.now();
     const isStale = now - this.lastRefreshed > this.CACHE_TTL;
 
-    // If cache is empty or stale, load from DB
+    // If cache is empty or stale, try to load from DB
     if (!this.cache || isStale) {
-      this.cache = await this.refreshCache();
-      this.lastRefreshed = now;
+      try {
+        const fresh = await this.refreshCache();
+        this.cache = fresh;
+        this.lastRefreshed = now;
+      } catch (error) {
+        // RESILIENCE: If DB is down, return the last known cache instead of throwing
+        // This prevents "Auto-Maintenance" lockout if the DB has a minor glitch.
+        if (this.cache) return this.cache;
+
+        // Ultimate Fallback: if no cache and DB is down, return default safe settings
+        return {
+          maintenanceMode: false,
+          registrationEnabled: true,
+          maxEntriesLimit: 5000,
+        };
+      }
     }
     return this.cache;
   }
