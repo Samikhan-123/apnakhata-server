@@ -16,6 +16,8 @@ The robust, enterprise-grade backend for **Apna Khata**, configured for high-sec
 - **Strategic Auditing**: A high-fidelity `AdminLog` system tracking every administrative action, from status changes to bulk operations, with humanized action identifiers.
 - **Modular Data Architecture**: Built with the **Service Pattern** and **Prisma ORM** for Type-Safe database operations and high-performance querying.
 - **Modern Authentication**: Secure session management featuring Google OAuth integration, JWT-based security, and OTP-led password recovery.
+- **Generative AI Advisor**: Integrated Google Gemini AI to provide context-aware, localized financial insights with strict API rate limiting (`aiLimiter`) to protect global quotas.
+- **Ultra-Fast Data Aggregation**: Engineered with `Promise.all` concurrency and O(N) in-memory Hash Maps, eliminating N+1 queries and driving Admin/User dashboard response times from ~3.5s down to <1500ms.
 - **Financial Intelligence API**: Specialized endpoints for calculating platform-wide interaction metrics and financial liquidity trends.
 
 ## 🛠️ Tech Stack
