@@ -100,13 +100,29 @@ export class AdminService {
       isVerified?: boolean;
       search?: string;
     } = {},
+    requestingUserRole?: UserRole,
   ) {
     const skip = (page - 1) * limit;
 
+    // 1. Unified Filter Construction
     const where: any = {};
-    if (filters.role) where.role = filters.role;
+
+    // Apply basic status/verification filters
     if (filters.isActive !== undefined) where.isActive = filters.isActive;
     if (filters.isVerified !== undefined) where.isVerified = filters.isVerified;
+    
+    // Apply role filtering with security boundary
+    if (requestingUserRole === UserRole.MODERATOR) {
+      // Moderators can only filter within non-Admin roles
+      if (filters.role && filters.role !== UserRole.ADMIN) {
+        where.role = filters.role;
+      } else {
+        where.role = { not: UserRole.ADMIN };
+      }
+    } else if (filters.role) {
+      where.role = filters.role;
+    }
+
     if (filters.search) {
       where.OR = [
         { email: { contains: filters.search, mode: "insensitive" } },
@@ -357,7 +373,7 @@ export class AdminService {
   /**
    * Get detailed information about a specific user
    */
-  async getUserDetails(id: string) {
+  async getUserDetails(id: string, requestingUserRole?: UserRole) {
     const user = await prisma.user.findUnique({
       where: { id },
       include: {
@@ -375,6 +391,11 @@ export class AdminService {
 
     if (!user) {
       throw new Error("User not found");
+    }
+
+    // Staff Privacy Guard: Moderators cannot view detailed profiles of Admins
+    if (requestingUserRole === UserRole.MODERATOR && user.role === UserRole.ADMIN) {
+      throw new Error("Forbidden: Moderators are not authorized to view Administrator profiles.");
     }
 
     // Advanced: Calculate User Specific Financial Health for Admin View

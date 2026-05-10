@@ -25,10 +25,10 @@ export class AdminController {
 
       const filters: any = { search: search as string };
       if (role) filters.role = role;
-      if (isActive !== undefined) filters.isActive = isActive === "true";
-      if (isVerified !== undefined) filters.isVerified = isVerified === "true";
+      if (isActive !== undefined && isActive !== "") filters.isActive = isActive === "true";
+      if (isVerified !== undefined && isVerified !== "") filters.isVerified = isVerified === "true";
 
-      const result = await adminService.getAllUsers(page, limit, filters);
+      const result = await adminService.getAllUsers(page, limit, filters, req.user.role);
       res.status(200).json({
         success: true,
         data: result.users,
@@ -79,7 +79,7 @@ export class AdminController {
   async getUserDetail(req: AuthRequest, res: Response, next: NextFunction) {
     try {
       const id = req.params.id as string;
-      const user = await adminService.getUserDetails(id);
+      const user = await adminService.getUserDetails(id, req.user.role);
 
       res.status(200).json({
         success: true,

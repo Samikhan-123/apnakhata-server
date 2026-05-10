@@ -62,6 +62,7 @@ export class AuditService {
     if (filters.search) {
       const searchTerm = filters.search.toLowerCase();
       where.OR = [
+        { action: { contains: searchTerm.toUpperCase().replace(/ /g, "_"), mode: "insensitive" } },
         { admin: { email: { contains: searchTerm, mode: "insensitive" } } },
         { admin: { name: { contains: searchTerm, mode: "insensitive" } } },
         { target: { email: { contains: searchTerm, mode: "insensitive" } } },

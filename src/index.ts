@@ -135,7 +135,7 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/ai-advisor", aiAdvisorRoutes);
 app.use("/api/goals", dashboardMiddleware, goalRoutes);
 
-// Sentry Error Handler (Must be before your custom error handler)
+// Sentry Error Handler (Must be before custom error handler)
 Sentry.setupExpressErrorHandler(app);
 
 // Error Handler

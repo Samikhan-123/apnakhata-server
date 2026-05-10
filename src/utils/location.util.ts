@@ -142,14 +142,20 @@ export const parseUserAgent = (uaString?: string): DeviceInfo => {
 
   const vendor = device.vendor;
   const model = device.model;
+  const type = device.type;
+
+  let deviceName = model || type || (isMobile ? "Mobile" : "Desktop");
+  if (vendor && model && !model.includes(vendor)) {
+    deviceName = `${vendor} ${model}`;
+  }
 
   return {
     browser: `${browserName}${browserVersion}`,
     os: `${osName}${osVersion}`,
     vendor,
     model: model || (isMobile ? "Mobile Device" : undefined),
-    device: model || device.type || (isMobile ? "Mobile" : "Desktop"),
-    deviceType: (device.type as any) || (isMobile ? "mobile" : "desktop"),
+    device: deviceName,
+    deviceType: (type as any) || (isMobile ? "mobile" : "desktop"),
     isMobile,
   };
 };
